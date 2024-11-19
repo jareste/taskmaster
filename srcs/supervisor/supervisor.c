@@ -114,13 +114,11 @@ void kill_me()
 }
 
 /* unsafe to call from outside supervisor. */
-void clenup(task_t* tasks)
+static void cleanup(task_t* tasks)
 {
     task_t* task = tasks;
     while (task)
     {
-        printf("\n#####################################################\n");
-        print_logs(task);
         if (task->state == RUNNING)
         {
             kill(task->pid, SIGKILL);
@@ -195,6 +193,8 @@ int supervisor(task_t* tasks)
 
         task = FT_LIST_GET_NEXT(&tasks, task);
     }
+
+    cleanup(tasks);
 
     return 0;
 }

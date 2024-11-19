@@ -22,7 +22,7 @@ typedef struct {
 // Command table
 command_t commands[] = {
     {"help", cmd_help, "Show this help menu"},
-    {"active", cmd_active, "Show active tasks"},
+    {"status", cmd_active, "Show tasks status"},
     {"stop", cmd_stop, "Stop a specific task by name"},
     {"update", cmd_update, "Re-read the configuration file"},
     {"kms", cmd_kms, "Kill the master supervisor"},
@@ -212,6 +212,7 @@ void cmd_update(void* param)
 void cmd_kms(void* param)
 {
     (void)param;
+    kill_me();
     pthread_exit(NULL);
 }
 
