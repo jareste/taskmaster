@@ -66,6 +66,19 @@ void push_log(task_t* task, const char* format, ...)
     FT_LIST_ADD_LAST(&task->logs, log);
 }
 
+void print_logs(task_t* task)
+{
+    log_t* log = NULL;
+
+    log = FT_LIST_GET_FIRST(&task->logs);
+    printf("Logs from task %s:\n", task->name);
+    while (log)
+    {
+        printf("%s\n", log->log);
+        log = FT_LIST_GET_NEXT(&task->logs, log);
+    }
+}
+
 void delete_logs(task_t* task)
 {
     log_t* log = NULL;
@@ -98,7 +111,7 @@ int supervisor(task_t* tasks)
         }
         if (task->state == NEW)
         {
-            push_log(task, "Task %s is new\n", task->name);
+            push_log(task, "Task %s is new", task->name);
             if (start_task(task) == -1)
             {
                 /* Fatal. stop all tasks and exit */
@@ -112,7 +125,7 @@ int supervisor(task_t* tasks)
             int result = waitpid(pid, &status, WNOHANG);
             if (result == 0)
             {
-                push_log(task, "Task %s is running\n", task->name);
+                push_log(task, "Task %s is running", task->name);
                 /* child running do nothing */
             }
             else if (result == -1)
@@ -123,22 +136,25 @@ int supervisor(task_t* tasks)
             }
             else
             {
-                printf("Task %s exited\n", task->name);
                 if (WIFEXITED(status))
                 {
                     int exit_status = WEXITSTATUS(status);
                     task->state = EXITED;
                     task->exit_status = exit_status;
-                    push_log(task, "Task %s exited with status %d\n", task->name, exit_status);
+                    push_log(task, "Task %s exited with status %d", task->name, exit_status);
                 }
                 else if (WIFSIGNALED(status))
                 {
                     int signal = WTERMSIG(status);
                     task->state = SIGNALED;
                     task->stop_signal = signal;
-                    push_log(task, "Task %s exited with signal %d\n", task->name, signal);
+                    push_log(task, "Task %s exited with signal %d", task->name, signal);
                 }
-
+                else
+                {
+                    task->state = FATAL;
+                    push_log(task, "Task %s exited with unknown status", task->name);
+                }
                 /* its no more valid */
                 task->pid = -1;
             }
@@ -152,6 +168,8 @@ int supervisor(task_t* tasks)
     task = tasks;
     while (task)
     {
+        printf("\n#####################################################\n");
+        print_logs(task);
         if (task->state == RUNNING)
         {
             kill(task->pid, SIGKILL);
