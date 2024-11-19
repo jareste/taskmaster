@@ -4,6 +4,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <unistd.h>
+
+pthread_t console_thread;
+
 //     typedef struct
 // {
 //     char*   name;
@@ -126,9 +130,18 @@ int main()
     FT_LIST_ADD_LAST(&tasks, &m_tasks2);
     FT_LIST_ADD_LAST(&tasks, &m_tasks3);
 
+    m_active_tasks = tasks;
+
+    pthread_t console_thread;
+
+    pthread_create(&console_thread, NULL, interactive_console, NULL);
 
     supervisor(tasks);
 
+    // sleep(10);
+
+    // pthread_cancel(console_thread);
+    pthread_join(console_thread, NULL);
 
     printf("Hello world\n");
     return 0;

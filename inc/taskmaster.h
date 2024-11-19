@@ -2,6 +2,7 @@
 #define TASKMASTER_H
 
 #include <ft_list.h>
+#include <pthread.h>
 
 typedef enum
 {
@@ -66,10 +67,12 @@ typedef struct
 
 #define MAX_LOGS 10
 
-extern pthread_mutex_t g_mutex_list;
+// extern pthread_mutex_t g_mutex_list;
 
+void print_logs(task_t* task);
 int supervisor(task_t* tasks);
 task_t* get_active_tasks();
-int interactive_console(void* param);
+void* interactive_console(void* param);
+void kill_me();
 
 #endif /* TASKMASTER_H */

@@ -7,6 +7,8 @@
 #include <ft_malloc.h>
 #include <taskmaster.h>
 
+static bool die = false;
+
 int start_task(task_t* task)
 {
     int pid = 0;
@@ -105,6 +107,29 @@ void check_if_start(task_t* task)
     }
 }
 
+void kill_me()
+{
+    /* cannot directly close it here as it could cause a fatal datarace. */
+    die = true;
+}
+
+/* unsafe to call from outside supervisor. */
+void clenup(task_t* tasks)
+{
+    task_t* task = tasks;
+    while (task)
+    {
+        printf("\n#####################################################\n");
+        print_logs(task);
+        if (task->state == RUNNING)
+        {
+            kill(task->pid, SIGKILL);
+        }
+        delete_logs(task);
+        task = FT_LIST_GET_NEXT(&tasks, task);
+    }
+}
+
 int supervisor(task_t* tasks)
 {
     task_t* task = NULL;
@@ -113,14 +138,14 @@ int supervisor(task_t* tasks)
     int loop = 0;
 
     task = tasks;
-    while (1)
+    while (die == false)
     {
         if (task == NULL)
         {
             loop++;
             task = tasks;
-            if (loop == 3)    
-                break;
+            // if (loop == 3)    
+            //     break;
             usleep(200000);
         }
         check_if_start(task);
@@ -168,19 +193,6 @@ int supervisor(task_t* tasks)
 
         update_next_steps(task);
 
-        task = FT_LIST_GET_NEXT(&tasks, task);
-    }
-
-    task = tasks;
-    while (task)
-    {
-        printf("\n#####################################################\n");
-        print_logs(task);
-        if (task->state == RUNNING)
-        {
-            kill(task->pid, SIGKILL);
-        }
-        delete_logs(task);
         task = FT_LIST_GET_NEXT(&tasks, task);
     }
 
