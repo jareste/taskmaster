@@ -12,6 +12,7 @@ void cmd_update(void* param);
 void cmd_kms(void* param);
 void cmd_print_logs(void* param);
 void cmd_kill_supervisor(void* param);
+void cmd_start(void* param);
 
 typedef struct {
     const char* name;
@@ -28,6 +29,7 @@ command_t commands[] = {
     {"kms", cmd_kms, "Kill the master supervisor"},
     {"logs", cmd_print_logs, "Print logs for a specific task or all tasks"},
     {"kill", cmd_kill_supervisor, "Kill the supervisor"},
+    {"start", cmd_start, "Start a specific task by name"},
     {NULL, NULL, NULL} // Sentinel value to mark end of table
 };
 
@@ -154,9 +156,14 @@ void cmd_active(void* param)
     }
 }
 
-int stop_task(const char* task_name)
+void cmd_start(void* param)
 {
-    return 0;
+    if (param == NULL)
+    {
+        printf("Usage: start <task_name>\n");
+        return;
+    }
+    const char* task_name = (const char*)param;
     task_t* tasks = get_active_tasks();
     if (tasks)
     {
@@ -165,17 +172,17 @@ int stop_task(const char* task_name)
         {
             if (strcmp(task->name, task_name) == 0)
             {
-                if (task->state == RUNNING)
-                {
-                    kill(task->pid, SIGKILL);
-                }
-                task->state = STOPPED;
-                return 0;
+                update_task_cmd_state(task, CMD_START);
+                return;
             }
             task = FT_LIST_GET_NEXT(&tasks, task);
         }
+        printf("Task not found: %s\n", task_name);
     }
-    return -1;
+    else
+    {
+        printf("No active tasks.\n");
+    }
 }
 
 void cmd_stop(void* param)
@@ -185,15 +192,15 @@ void cmd_stop(void* param)
         printf("Usage: stop <task_name>\n");
         return;
     }
-    const char* task_name = (const char*)param;
-    if (stop_task(task_name) == 0)
-    {
-        printf("Stopped task: %s\n", task_name);
-    }
-    else
-    {
-        printf("Failed to stop task: %s\n", task_name);
-    }
+    // const char* task_name = (const char*)param;
+    // if (stop_task(task_name) == 0)
+    // {
+    //     printf("Stopped task: %s\n", task_name);
+    // }
+    // else
+    // {
+    //     printf("Failed to stop task: %s\n", task_name);
+    // }
 }
 
 void cmd_update(void* param)

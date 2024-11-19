@@ -3,23 +3,35 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <stdarg.h>
+#include <string.h>
 
 #include <ft_malloc.h>
 #include <taskmaster.h>
 
 static bool die = false;
+pthread_mutex_t g_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 void update_task_state(task_t* task, task_state state);
+void push_log(task_t* task, const char* format, ...);
+static void cleanup(task_t* tasks);
 
 int start_task(task_t* task)
 {
     int pid = 0;
 
+    push_log(task, "Starting task %s", task->name);
     update_task_state(task, STARTING);
     
     pid = fork();
     if (pid == 0)
     {
+        /* if we gotta redirect something
+         * do it here so father its clear
+         */
+        
+        /* clear everything before child run and die */
+        // char* task_cmd = strdup(task->cmd);
+        // cleanup(task);
         execve(task->cmd, task->args, task->env);
         exit(0);
     }
@@ -41,6 +53,14 @@ void update_next_steps(task_t* task)
 {
     (void)task;
 
+}
+
+void update_task_cmd_state(task_t* task, cmd_request cmd)
+{
+    /* put mutex here */
+    pthread_mutex_lock(&g_mutex);
+    task->cmd_request = cmd;
+    pthread_mutex_unlock(&g_mutex);
 }
 
 void push_log(task_t* task, const char* format, ...)
@@ -93,6 +113,60 @@ void delete_logs(task_t* task)
     }
 }
 
+void force_start_task(task_t* task)
+{
+    /* able to be called from console, put a mutex here */
+    switch (task->state)
+    {
+        case RUNNING:
+            push_log(task, "Task %s is already running", task->name);
+            break;
+        case STARTING:
+            push_log(task, "Task %s is starting, cannot start it now", task->name);
+            break;
+        case STOPPING:
+            push_log(task, "Task %s is stopping, cannot start it now", task->name);
+            break;
+        case FATAL:
+        case EXITED:
+        case SIGNALED:
+        case UNKNOWN:
+        case BACKOFF:
+        case STOPPED:
+            if (start_task(task) == -1)
+            {
+                /* Fatal. stop all tasks and exit */
+                ft_assert(0, "A task failed on launch, something bad going on.");
+            }
+            break;
+    }
+}
+
+int stop_task(const char* task_name)
+{
+    /* protect it with mutex it can be used from outside!! */
+    return 0;
+    task_t* tasks = get_active_tasks();
+    if (tasks)
+    {
+        task_t* task = tasks;
+        while (task)
+        {
+            if (strcmp(task->name, task_name) == 0)
+            {
+                if (task->state == RUNNING)
+                {
+                    kill(task->pid, SIGKILL);
+                }
+                task->state = STOPPED;
+                return 0;
+            }
+            task = FT_LIST_GET_NEXT(&tasks, task);
+        }
+    }
+    return -1;
+}
+
 void check_if_start(task_t* task)
 {
     /*
@@ -100,12 +174,27 @@ void check_if_start(task_t* task)
     */
     if (task->autostart == true && task->state == STOPPED)
     {
-        push_log(task, "Starting task %s", task->name);
         if (start_task(task) == -1)
         {
             /* Fatal. stop all tasks and exit */
             ft_assert(0, "A task failed on launch, something bad going on.");
         }
+    }
+    if (task->cmd_request == CMD_START)
+    {
+        start_task(task);
+        update_task_cmd_state(task, CMD_NONE);
+    }
+    else if (task->cmd_request == CMD_STOP)
+    {
+        stop_task(task->name);
+        update_task_cmd_state(task, CMD_NONE);
+    }
+    else if (task->cmd_request == CMD_RESTART)
+    {
+        stop_task(task->name);
+        start_task(task);
+        update_task_cmd_state(task, CMD_NONE);
     }
 }
 

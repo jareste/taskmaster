@@ -35,22 +35,9 @@ task_t* get_active_tasks()
 
 void handle_sigint(int sig)
 {
-    task_t* task = NULL;
-
-    task = FT_LIST_GET_FIRST(&m_active_tasks);
-
-    while (task)
-    {
-        if (task->state == RUNNING)
-        {
-            kill(task->pid, SIGINT);
-        }
-        task = FT_LIST_GET_NEXT(&m_active_tasks, task);
-    }
-    
-
+    kill_me();
+    pthread_cancel(console_thread);
     printf("Caught signal %d (SIGINT). Exiting...\n", sig);
-    exit(0);
 }
 
 
@@ -89,7 +76,7 @@ int main()
     };
     task_t m_tasks2 = {
             .name = "task2",
-            .cmd = "echo ",
+            .cmd = "echo",
             .args = args2,
             .dir = "/home/user",
             .env = env2,
@@ -131,8 +118,6 @@ int main()
     FT_LIST_ADD_LAST(&tasks, &m_tasks3);
 
     m_active_tasks = tasks;
-
-    pthread_t console_thread;
 
     pthread_create(&console_thread, NULL, interactive_console, NULL);
 

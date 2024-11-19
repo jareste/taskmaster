@@ -19,6 +19,14 @@ typedef enum
 
 typedef enum
 {
+    CMD_NONE,
+    CMD_START,
+    CMD_STOP,
+    CMD_RESTART,
+} cmd_request;
+
+typedef enum
+{
     true,
     false
 } bool;
@@ -64,6 +72,7 @@ typedef struct
     int         stop_signal; /* signal that stopped the process*/
     log_t       logs; /* logs that the supervisor it's tracing about process */
     task_state  prev_state; /* how it is now? */
+    cmd_request cmd_request; /* what to do with this task */
 } task_t;
 
 #define MAX_LOGS 10
@@ -75,5 +84,6 @@ int supervisor(task_t* tasks);
 task_t* get_active_tasks();
 void* interactive_console(void* param);
 void kill_me();
+void update_task_cmd_state(task_t* task, cmd_request cmd);
 
 #endif /* TASKMASTER_H */
