@@ -9,11 +9,13 @@
 
 static bool die = false;
 
+void update_task_state(task_t* task, task_state state);
+
 int start_task(task_t* task)
 {
     int pid = 0;
 
-    task->state = STARTING;
+    update_task_state(task, STARTING);
     
     pid = fork();
     if (pid == 0)
@@ -23,13 +25,13 @@ int start_task(task_t* task)
     }
     else if (pid < 0)
     {
-        task->state = FATAL;
+        update_task_state(task, FATAL);
         return -1;
     }
     else
     {
         task->pid = pid;
-        task->state = RUNNING;
+        update_task_state(task, RUNNING);
     }
 
     return (0);
@@ -128,6 +130,12 @@ static void cleanup(task_t* tasks)
     }
 }
 
+void update_task_state(task_t* task, task_state state)
+{
+    task->prev_state = task->state;
+    task->state = state;
+}
+
 int supervisor(task_t* tasks)
 {
     task_t* task = NULL;
@@ -154,7 +162,8 @@ int supervisor(task_t* tasks)
             int result = waitpid(pid, &status, WNOHANG);
             if (result == 0)
             {
-                push_log(task, "Task %s is running", task->name);
+                if (task->state != task->prev_state)
+                    push_log(task, "Task %s is running", task->name);
                 /* child running do nothing */
             }
             else if (result == -1)
@@ -168,20 +177,20 @@ int supervisor(task_t* tasks)
                 if (WIFEXITED(status))
                 {
                     int exit_status = WEXITSTATUS(status);
-                    task->state = EXITED;
+                    update_task_state(task, EXITED);
                     task->exit_status = exit_status;
                     push_log(task, "Task %s exited with status %d", task->name, exit_status);
                 }
                 else if (WIFSIGNALED(status))
                 {
                     int signal = WTERMSIG(status);
-                    task->state = SIGNALED;
+                    update_task_state(task, SIGNALED);
                     task->stop_signal = signal;
                     push_log(task, "Task %s exited with signal %d", task->name, signal);
                 }
                 else
                 {
-                    task->state = FATAL;
+                    update_task_state(task, FATAL);
                     push_log(task, "Task %s exited with unknown status", task->name);
                 }
                 /* its no more valid */

@@ -63,6 +63,7 @@ typedef struct
     int         exit_status; /* exit code of the process */
     int         stop_signal; /* signal that stopped the process*/
     log_t       logs; /* logs that the supervisor it's tracing about process */
+    task_state  prev_state; /* how it is now? */
 } task_t;
 
 #define MAX_LOGS 10

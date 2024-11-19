@@ -240,6 +240,7 @@ void cmd_print_logs(void* param)
         task_t* task = tasks;
         while (task)
         {
+            printf("\n#################### %s ####################\n", task->name);
             print_logs(task);
             task = FT_LIST_GET_NEXT(&tasks, task);
         }
