@@ -1,8 +1,11 @@
 #ifndef TASKMASTER_H
 #define TASKMASTER_H
 
-enum
+#include <ft_list.h>
+
+typedef enum
 {
+    NEW,
     STOPPED,
     STARTING,
     RUNNING,
@@ -10,40 +13,52 @@ enum
     EXITED,
     FATAL,
     BACKOFF,
+    SIGNALED,
     UNKNOWN
 } task_state;
 
-enum
+typedef enum
 {
     true,
     false
 } bool;
 
-enum
+typedef enum
 {
     ALWAYS,
     UNEXPECTED,
     SUCCESS,
     FAILURE,
     NEVER
-} autorestart;
+} AR_modes;
 
 typedef struct
 {
+    list_item_t  l;
     char*   name;
     char*   cmd;
+    char**   args;
     char*   dir;
     char**  env;
     int         autostart;
-    autorestart autorestart;
+    AR_modes ar;
     int     startretries;
     int     starttime;
     int     stoptime;
-    int     exitcodes;
+    int*    exitcodes;
     int     stopsignal;
     int     stoptimeout;
     int     stdout;
     int     stderr;
+    task_state  state;
+
+    /* intern info */
+    int     pid;
+    int     exit_status;
+    int     stop_signal;
 } task_t;
+
+
+int supervisor(task_t* tasks);
 
 #endif /* TASKMASTER_H */

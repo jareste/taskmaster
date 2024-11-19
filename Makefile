@@ -3,17 +3,17 @@ NAME = taskmaster
 #########
 RM = rm -rf
 CC = cc
-CFLAGS = -Werror -Wextra -Wall
+CFLAGS = -Werror -Wextra -Wall -g -fsanitize=address
 LDFLAGS = -lm
 RELEASE_CFLAGS = $(CFLAGS) -DNDEBUG
 #########
 
 #########
-FILES = main ft_malloc ft_list 
+FILES = main ft_malloc ft_list supervisor
 
 SRC = $(addsuffix .c, $(FILES))
 
-vpath %.c srcs inc srcs/parse_arg srcs/nmap 
+vpath %.c srcs inc srcs/parser srcs/supervisor 
 #########
 
 #########
@@ -25,7 +25,7 @@ DEP = $(addsuffix .d, $(basename $(OBJ)))
 #########
 $(OBJ_DIR)/%.o: %.c
 	@mkdir -p $(@D)
-	${CC} -MMD $(CFLAGS) -c -Isrcs/nmap -Iinc -Isrcs/parse_arg -Isrcs/nmap $< -o $@
+	${CC} -MMD $(CFLAGS) -c  -Iinc -Isrcs/parser  $< -o $@
 
 all: .gitignore
 	$(MAKE) $(NAME)
