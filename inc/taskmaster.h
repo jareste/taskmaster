@@ -5,7 +5,6 @@
 
 typedef enum
 {
-    NEW,
     STOPPED,
     STARTING,
     RUNNING,
@@ -40,33 +39,37 @@ typedef struct
 
 typedef struct
 {
-    list_item_t  l;
-    char*   name;
-    char*   cmd;
-    char**   args;
-    char*   dir;
-    char**  env;
-    int         autostart;
-    AR_modes ar;
-    int     startretries;
-    int     starttime;
-    int     stoptime;
-    int*    exitcodes;
-    int     stopsignal;
-    int     stoptimeout;
-    int     stdout;
-    int     stderr;
-    task_state  state;
+    list_item_t l;
+    char*       name; /* it's name */
+    char*       cmd; /* cmd to launch */
+    char**      args; /* args of the process */
+    char*       dir; /* where should we chdir */
+    char**      env; /* environment */
+    bool        autostart; /* autostart or wait CLI order? */
+    AR_modes    ar; /* when to autorestart */
+    int         startretries; /* if it fails to start how many times should we try? */
+    int         starttime; /*????*/
+    int         stoptime; /*????*/
+    int*        exitcodes; /* valid exit codes of the process, any other must be informed */
+    int         stopsignal; /* signal to stop the process */
+    int         stoptimeout; /* when to stop it? */
+    int         stdout; /* where to write stdout */
+    int         stderr; /* wher the stderr should be written */
+    task_state  state; /* how it is now? */
 
     /* intern info */
-    int     pid;
-    int     exit_status;
-    int     stop_signal;
-    log_t   logs;
+    int         pid; /* process id of the process */
+    int         exit_status; /* exit code of the process */
+    int         stop_signal; /* signal that stopped the process*/
+    log_t       logs; /* logs that the supervisor it's tracing about process */
 } task_t;
 
 #define MAX_LOGS 10
 
+extern pthread_mutex_t g_mutex_list;
+
 int supervisor(task_t* tasks);
+task_t* get_active_tasks();
+int interactive_console(void* param);
 
 #endif /* TASKMASTER_H */

@@ -7,8 +7,6 @@
 #include <ft_malloc.h>
 #include <taskmaster.h>
 
-// static task_t m_active_tasks = NULL;
-
 int start_task(task_t* task)
 {
     int pid = 0;
@@ -91,6 +89,22 @@ void delete_logs(task_t* task)
     }
 }
 
+void check_if_start(task_t* task)
+{
+    /*
+        Autostart only start when stopped, otherwise don't do anything
+    */
+    if (task->autostart == true && task->state == STOPPED)
+    {
+        push_log(task, "Starting task %s", task->name);
+        if (start_task(task) == -1)
+        {
+            /* Fatal. stop all tasks and exit */
+            ft_assert(0, "A task failed on launch, something bad going on.");
+        }
+    }
+}
+
 int supervisor(task_t* tasks)
 {
     task_t* task = NULL;
@@ -109,15 +123,7 @@ int supervisor(task_t* tasks)
                 break;
             usleep(200000);
         }
-        if (task->state == NEW)
-        {
-            push_log(task, "Task %s is new", task->name);
-            if (start_task(task) == -1)
-            {
-                /* Fatal. stop all tasks and exit */
-                ft_assert(0, "A task failed on launch, something bad going on.");
-            }
-        }
+        check_if_start(task);
 
         pid = task->pid;
         if (pid > 0)

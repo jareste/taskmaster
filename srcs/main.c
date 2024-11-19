@@ -24,6 +24,11 @@
 
 static task_t* m_active_tasks = NULL;
 
+task_t* get_active_tasks()
+{
+    return m_active_tasks;
+}
+
 void handle_sigint(int sig)
 {
     task_t* task = NULL;
@@ -66,7 +71,7 @@ int main()
             .args = args,
             .dir = "/",
             .env = env,
-            .autostart = 1,
+            .autostart = true,
             .ar = ALWAYS,
             .startretries = 3,
             .starttime = 1,
@@ -76,7 +81,7 @@ int main()
             .stoptimeout = 1,
             .stdout = 1,
             .stderr = 1,
-            .state = NEW
+            .state = STOPPED
     };
     task_t m_tasks2 = {
             .name = "task2",
@@ -84,7 +89,7 @@ int main()
             .args = args2,
             .dir = "/home/user",
             .env = env2,
-            .autostart = 0,
+            .autostart = false,
             .ar = SUCCESS,
             .startretries = 5,
             .starttime = 2,
@@ -94,7 +99,7 @@ int main()
             .stoptimeout = 2,
             .stdout = 1,
             .stderr = 1,
-            .state = NEW
+            .state = STOPPED
     };
     task_t m_tasks3 = {
             .name = "task3",
@@ -102,7 +107,7 @@ int main()
             .args = args3,
             .dir = "/usr/bin",
             .env = env3,
-            .autostart = 1,
+            .autostart = true,
             .ar = FAILURE,
             .startretries = 2,
             .starttime = 3,
@@ -112,7 +117,7 @@ int main()
             .stoptimeout = 3,
             .stdout = 1,
             .stderr = 1,
-            .state = NEW
+            .state = STOPPED
     };
 
     task_t* tasks = NULL;
