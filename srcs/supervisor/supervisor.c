@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <stdarg.h>
 
 #include <ft_malloc.h>
 #include <taskmaster.h>
@@ -34,6 +35,49 @@ int start_task(task_t* task)
     return (0);
 }
 
+void update_next_steps(task_t* task)
+{
+    (void)task;
+
+}
+
+void push_log(task_t* task, const char* format, ...)
+{
+    log_t* log = NULL;
+    va_list args;
+
+    log = ft_malloc(sizeof(log_t));
+    if (log == NULL)
+    {
+        return;
+    }
+
+    if (FT_LIST_GET_SIZE(&task->logs) > 10)
+    {
+        log_t* old_log = FT_LIST_GET_FIRST(&task->logs);
+        FT_LIST_POP(&task->logs, old_log);
+        free(old_log);
+    }
+
+    va_start(args, format);
+    vsnprintf(log->log, sizeof(log->log), format, args);
+    va_end(args);
+
+    FT_LIST_ADD_LAST(&task->logs, log);
+}
+
+void delete_logs(task_t* task)
+{
+    log_t* log = NULL;
+
+    while (FT_LIST_GET_SIZE(&task->logs) > 0)
+    {
+        log = FT_LIST_GET_FIRST(&task->logs);
+        FT_LIST_POP(&task->logs, log);
+        free(log);
+    }
+}
+
 int supervisor(task_t* tasks)
 {
     task_t* task = NULL;
@@ -54,7 +98,7 @@ int supervisor(task_t* tasks)
         }
         if (task->state == NEW)
         {
-            printf("Starting task %s\n", task->name);
+            push_log(task, "Task %s is new\n", task->name);
             if (start_task(task) == -1)
             {
                 /* Fatal. stop all tasks and exit */
@@ -62,13 +106,13 @@ int supervisor(task_t* tasks)
             }
         }
 
-        pid = task->pid; // Assuming task->pid holds the PID of the task
+        pid = task->pid;
         if (pid > 0)
         {
             int result = waitpid(pid, &status, WNOHANG);
             if (result == 0)
             {
-                printf("Task %s is running\n", task->name);
+                push_log(task, "Task %s is running\n", task->name);
                 /* child running do nothing */
             }
             else if (result == -1)
@@ -85,19 +129,34 @@ int supervisor(task_t* tasks)
                     int exit_status = WEXITSTATUS(status);
                     task->state = EXITED;
                     task->exit_status = exit_status;
-                    printf("Task %s exited with status %d\n", task->name, exit_status);
+                    push_log(task, "Task %s exited with status %d\n", task->name, exit_status);
                 }
                 else if (WIFSIGNALED(status))
                 {
                     int signal = WTERMSIG(status);
                     task->state = SIGNALED;
                     task->stop_signal = signal;
-                    printf("Task %s exited with signal %d\n", task->name, signal);
+                    push_log(task, "Task %s exited with signal %d\n", task->name, signal);
                 }
+
+                /* its no more valid */
+                task->pid = -1;
             }
         }
 
+        update_next_steps(task);
 
+        task = FT_LIST_GET_NEXT(&tasks, task);
+    }
+
+    task = tasks;
+    while (task)
+    {
+        if (task->state == RUNNING)
+        {
+            kill(task->pid, SIGKILL);
+        }
+        delete_logs(task);
         task = FT_LIST_GET_NEXT(&tasks, task);
     }
 

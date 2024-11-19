@@ -34,6 +34,12 @@ typedef enum
 
 typedef struct
 {
+    list_item_t l;
+    char log[1024];
+} log_t;
+
+typedef struct
+{
     list_item_t  l;
     char*   name;
     char*   cmd;
@@ -56,8 +62,10 @@ typedef struct
     int     pid;
     int     exit_status;
     int     stop_signal;
+    log_t   logs;
 } task_t;
 
+#define MAX_LOGS 10
 
 int supervisor(task_t* tasks);
 
