@@ -13,6 +13,7 @@ void cmd_kms(void* param);
 void cmd_print_logs(void* param);
 void cmd_kill_supervisor(void* param);
 void cmd_start(void* param);
+void cmd_new(void* param); /* TODO */
 
 typedef struct {
     const char* name;
@@ -20,7 +21,6 @@ typedef struct {
     const char* description;
 } command_t;
 
-// Command table
 command_t commands[] = {
     {"help", cmd_help, "Show this help menu"},
     {"status", cmd_active, "Show tasks status"},
@@ -30,10 +30,10 @@ command_t commands[] = {
     {"logs", cmd_print_logs, "Print logs for a specific task or all tasks"},
     {"kill", cmd_kill_supervisor, "Kill the supervisor"},
     {"start", cmd_start, "Start a specific task by name"},
-    {NULL, NULL, NULL} // Sentinel value to mark end of table
+    {"new", cmd_new, "Create a new task"},
+    {NULL, NULL, NULL}
 };
 
-// Helper function to find a command in the table
 command_t* find_command(const char* name)
 {
     for (command_t* cmd = commands; cmd->name != NULL; ++cmd)
@@ -51,17 +51,18 @@ void* interactive_console(void* param)
     char input[256];
     (void)param;
 
-    printf("Interactive Console. Type 'help' for a list of commands.\n");
+    fprintf(stdout,"Interactive Console. Type 'help' for a list of commands.\n");
+    fflush(stdout);
 
     while (1)
     {
-        printf("-> ");
+        fprintf(stdout, "-> ");
+        fflush(stdout);
         if (fgets(input, sizeof(input), stdin) == NULL)
         {
             break; // Handle EOF or error
         }
 
-        // Remove trailing newline
         input[strcspn(input, "\n")] = 0;
 
         if (strcmp(input, "exit") == 0)
@@ -69,7 +70,6 @@ void* interactive_console(void* param)
             break;
         }
 
-        // Parse the command
         char* cmd_name = strtok(input, " ");
         char* arg = strtok(NULL, "");
 
@@ -92,9 +92,12 @@ void* interactive_console(void* param)
         }
         else
         {
-            printf("Unknown command: '%s'. Type 'help' for a list of commands.\n", cmd_name);
+            fprintf(stdout, "Unknown command: '%s'. Type 'help' for a list of commands.\n", cmd_name);
         }
     }
+
+    /* something went wrong, lets just end safely. */
+    kill_me();
 
     return NULL;
 }
@@ -125,14 +128,13 @@ char* get_state_string(task_state ts)
     return "UNKNOWN";
 }
 
-// Command implementations
 void cmd_help(void* param)
 {
     (void)param;
-    printf("Available commands:\n");
+    fprintf(stdout, "Available commands:\n");
     for (command_t* cmd = commands; cmd->name != NULL; ++cmd)
     {
-        printf("  %s: %s\n", cmd->name, cmd->description);
+        fprintf(stdout, "  %s: %s\n", cmd->name, cmd->description);
     }
 }
 
@@ -142,17 +144,17 @@ void cmd_active(void* param)
     task_t* tasks = get_active_tasks();
     if (tasks)
     {
-        printf("Active tasks:\n");
+        fprintf(stdout, "Active tasks:\n");
         task_t* task = tasks;
         while (task)
         {
-            printf("\t- %s :\t%s\n", task->parser.name, get_state_string(task->intern.state));
+            fprintf(stdout, "\t- %s :\t%s\n", task->parser.name, get_state_string(task->intern.state));
             task = FT_LIST_GET_NEXT(&tasks, task);
         }
     }
     else
     {
-        printf("No active tasks.\n");
+        fprintf(stdout, "No active tasks.\n");
     }
 }
 
@@ -160,7 +162,7 @@ void cmd_start(void* param)
 {
     if (param == NULL)
     {
-        printf("Usage: start <task_name>\n");
+        fprintf(stdout, "Usage: start <task_name>\n");
         return;
     }
     const char* task_name = (const char*)param;
@@ -177,11 +179,11 @@ void cmd_start(void* param)
             }
             task = FT_LIST_GET_NEXT(&tasks, task);
         }
-        printf("Task not found: %s\n", task_name);
+        fprintf(stdout, "Task not found: %s\n", task_name);
     }
     else
     {
-        printf("No active tasks.\n");
+        fprintf(stdout, "No active tasks.\n");
     }
 }
 
@@ -189,18 +191,29 @@ void cmd_stop(void* param)
 {
     if (param == NULL)
     {
-        printf("Usage: stop <task_name>\n");
+        fprintf(stdout, "Usage: stop <task_name>\n");
         return;
     }
-    // const char* task_name = (const char*)param;
-    // if (stop_task(task_name) == 0)
-    // {
-    //     printf("Stopped task: %s\n", task_name);
-    // }
-    // else
-    // {
-    //     printf("Failed to stop task: %s\n", task_name);
-    // }
+    const char* task_name = (const char*)param;
+    task_t* tasks = get_active_tasks();
+    if (tasks)
+    {
+        task_t* task = tasks;
+        while (task)
+        {
+            if (strcmp(task->parser.name, task_name) == 0)
+            {
+                update_task_cmd_state(task, CMD_STOP);
+                return;
+            }
+            task = FT_LIST_GET_NEXT(&tasks, task);
+        }
+        fprintf(stdout, "Task not found: %s\n", task_name);
+    }
+    else
+    {
+        fprintf(stdout, "No active tasks.\n");
+    }
 }
 
 void cmd_update(void* param)
@@ -240,14 +253,14 @@ void cmd_print_logs(void* param)
             }
             task = FT_LIST_GET_NEXT(&tasks, task);
         }
-        printf("Task not found: %s\n", task_name);
+        fprintf(stdout, "Task not found: %s\n", task_name);
     }
     else
     {
         task_t* task = tasks;
         while (task)
         {
-            printf("\n#################### %s ####################\n", task->parser.name);
+            fprintf(stdout, "\n#################### %s ####################\n", task->parser.name);
             print_logs(task);
             task = FT_LIST_GET_NEXT(&tasks, task);
         }
@@ -258,4 +271,20 @@ void cmd_kill_supervisor(void* param)
 {
     (void)param;
     kill_me();
+}
+
+/* this must prompt and request for whole parser
+ * parameters in order to create task.
+ */
+void cmd_new(void* param)
+{
+    (void)param;
+    // if (create_new_task() == 0)
+    // {
+    //     printf("New task created.\n");
+    // }
+    // else
+    // {
+    //     printf("Failed to create new task.\n");
+    // }
 }

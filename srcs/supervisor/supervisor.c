@@ -4,6 +4,7 @@
 #include <sys/wait.h>
 #include <stdarg.h>
 #include <string.h>
+#include <errno.h>
 
 #include <ft_malloc.h>
 #include <taskmaster.h>
@@ -17,14 +18,24 @@ static void cleanup(task_t* tasks);
 
 int start_task(task_t* task)
 {
+    int pipefd[2];
     int pid = 0;
+    char buffer[1024];
 
     push_log(task, "Starting task %s", task->parser.name);
     update_task_state(task, STARTING);
     
+    if (pipe(pipefd) == -1)
+    {
+        push_log(task, "Failed to start task %s due to %s.", task->parser.name, strerror(errno));
+        update_task_state(task, FATAL);
+        return -1;
+    }
+
     pid = fork();
     if (pid == 0)
     {
+        close(pipefd[0]);
         /* if we gotta redirect something
          * do it here so father its clear
          */
@@ -34,17 +45,62 @@ int start_task(task_t* task)
         // cleanup(task);
 
         execve(task->parser.cmd, task->parser.args, task->parser.env);
-        exit(0);
+        
+        snprintf(buffer, sizeof(buffer), "Failed to start task %s due to %s.", task->parser.name, strerror(errno));
+        write(pipefd[1], buffer, strlen(buffer));
+        close(pipefd[1]);
+        cleanup(task);
+        exit(EXIT_FAILURE);
     }
     else if (pid < 0)
     {
         update_task_state(task, FATAL);
+        close(pipefd[0]);
+        close(pipefd[1]);
         return -1;
     }
     else
     {
-        task->intern.pid = pid;
-        update_task_state(task, RUNNING);
+        close(pipefd[1]);
+
+        fd_set readfds;
+        struct timeval timeout;
+        int retval;
+
+        FD_ZERO(&readfds);
+        FD_SET(pipefd[0], &readfds);
+
+        timeout.tv_sec = 0;
+        timeout.tv_usec = 500000;
+
+        retval = select(pipefd[0] + 1, &readfds, NULL, NULL, &timeout);
+
+        if (retval == -1)
+        {
+            close(pipefd[0]);
+            return -1;
+        }
+        else if (retval == 0)
+        {
+            task->intern.pid = pid;
+            update_task_state(task, RUNNING);
+        }
+        else
+        {
+            int nbytes = read(pipefd[0], buffer, sizeof(buffer));
+            if (nbytes > 0)
+            {
+                buffer[nbytes] = '\0';
+                push_log(task, buffer);
+                update_task_state(task, FATAL);
+            }
+            else
+            {
+                task->intern.pid = pid;
+                update_task_state(task, RUNNING);
+            }
+        }
+        close(pipefd[0]);
     }
 
     return (0);
@@ -146,7 +202,6 @@ void force_start_task(task_t* task)
 int stop_task(const char* task_name)
 {
     /* protect it with mutex it can be used from outside!! */
-    return 0;
     task_t* tasks = get_active_tasks();
     if (tasks)
     {
@@ -188,6 +243,7 @@ void check_if_start(task_t* task)
     }
     else if (task->intern.cmd_request == CMD_STOP)
     {
+        fprintf(stdout, "Stopping task %s\n", task->parser.name);
         stop_task(task->parser.name);
         update_task_cmd_state(task, CMD_NONE);
     }
@@ -253,7 +309,10 @@ int supervisor(task_t* tasks)
             if (result == 0)
             {
                 if (task->intern.state != task->intern.prev_state)
+                {
+                    task->intern.prev_state = task->intern.state;
                     push_log(task, "Task %s is running", task->parser.name);
+                }
                 /* child running do nothing */
             }
             else if (result == -1)

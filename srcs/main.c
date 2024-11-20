@@ -6,7 +6,7 @@
 
 #include <unistd.h>
 
-pthread_t console_thread;
+static pthread_t console_thread;
 
 //     typedef struct
 // {
@@ -49,16 +49,18 @@ int main()
     int exitcodes2[] = {1,2};
     int exitcodes3[] = {127,3};
 
-    char *args[] = {"ls", "-l", "-a", NULL};
+    char *args[] = {"/bin/ls", "-l", "-a", NULL};
     char *env[] = {"HOME=/", "LOGNAME=home", "PATH=/usr/bin", NULL};
-    char *args2[] = {"echo", "'Hello, World!'", NULL};
+    char *args2[] = {"/bin/echo", "'Hello, World!'", NULL};
     char *env2[] = {"HOME=/home/user", "LOGNAME=user", "PATH=/usr/bin", NULL};
     char *args3[] = {"ping", "-c 4 google.es", NULL};
     char *env3[] = {"HOME=/usr/bin", "LOGNAME=bin", "PATH=/usr/bin", NULL};
+    char *argv[] = {"/bin/sh", "-c", "while :; do sleep 1; done", NULL};
+    char *envp[] = {NULL};
 
     task_t m_tasks1 = {
             .parser.name = "task1",
-            .parser.cmd = "ls",
+            .parser.cmd = "/bin/ls",
             .parser.args = args,
             .parser.dir = "/",
             .parser.env = env,
@@ -110,12 +112,31 @@ int main()
             .parser.stderr = 1,
             .intern.state = STOPPED
     };
+    task_t m_tasks4 = {
+        .parser.name = "task4",
+        .parser.cmd = "/bin/sh",
+        .parser.args = argv,
+        .parser.dir = "/",
+        .parser.env = envp,
+        .parser.autostart = true,
+        .parser.ar = ALWAYS,
+        .parser.startretries = 3,
+        .parser.starttime = 1,
+        .parser.stoptime = 1,
+        .parser.exitcodes = exitcodes1,
+        .parser.stopsignal = 0,
+        .parser.stoptimeout = 1,
+        .parser.stdout = 1,
+        .parser.stderr = 1,
+        .intern.state = STOPPED
+    };
 
     task_t* tasks = NULL;
     /*parser*/
     FT_LIST_ADD_LAST(&tasks, &m_tasks1);
     FT_LIST_ADD_LAST(&tasks, &m_tasks2);
     FT_LIST_ADD_LAST(&tasks, &m_tasks3);
+    FT_LIST_ADD_LAST(&tasks, &m_tasks4);
 
     m_active_tasks = tasks;
 
