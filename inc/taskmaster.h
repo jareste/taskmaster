@@ -40,7 +40,6 @@ typedef struct
 
 typedef struct
 {
-    list_item_t l;
     char*       name; /* it's name */
     char*       cmd; /* cmd to launch */
     char**      args; /* args of the process */
@@ -56,14 +55,26 @@ typedef struct
     int         stoptimeout; /* when to stop it? */
     int         stdout; /* where to write stdout */
     int         stderr; /* wher the stderr should be written */
+} parser_t;
+
+typedef struct
+{
     task_state  state; /* how it is now? */
 
-    /* intern info */
     int         pid; /* process id of the process */
     int         exit_status; /* exit code of the process */
     int         stop_signal; /* signal that stopped the process*/
     log_t       logs; /* logs that the supervisor it's tracing about process */
     task_state  prev_state; /* how it is now? */
+} intern_t;
+
+typedef struct
+{
+    list_item_t l;
+
+    parser_t    parser; /* parser info */
+
+    intern_t    intern;
 } task_t;
 
 #define MAX_LOGS 10
