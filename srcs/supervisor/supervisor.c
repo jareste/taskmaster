@@ -32,7 +32,8 @@ int start_task(task_t* task)
         /* clear everything before child run and die */
         // char* task_cmd = strdup(task->cmd);
         // cleanup(task);
-        execve(task->cmd, task->args, task->env);
+
+        execve(task->parser.cmd, task->parser.args, task->parser.env);
         exit(0);
     }
     else if (pid < 0)
@@ -42,7 +43,7 @@ int start_task(task_t* task)
     }
     else
     {
-        task->pid = pid;
+        task->intern.pid = pid;
         update_task_state(task, RUNNING);
     }
 
@@ -74,10 +75,10 @@ void push_log(task_t* task, const char* format, ...)
         return;
     }
 
-    if (FT_LIST_GET_SIZE(&task->logs) > 10)
+    if (FT_LIST_GET_SIZE(&task->intern.logs) > 10)
     {
-        log_t* old_log = FT_LIST_GET_FIRST(&task->logs);
-        FT_LIST_POP(&task->logs, old_log);
+        log_t* old_log = FT_LIST_GET_FIRST(&task->intern.logs);
+        FT_LIST_POP(&task->intern.logs, old_log);
         free(old_log);
     }
 
@@ -85,19 +86,19 @@ void push_log(task_t* task, const char* format, ...)
     vsnprintf(log->log, sizeof(log->log), format, args);
     va_end(args);
 
-    FT_LIST_ADD_LAST(&task->logs, log);
+    FT_LIST_ADD_LAST(&task->intern.logs, log);
 }
 
 void print_logs(task_t* task)
 {
     log_t* log = NULL;
 
-    log = FT_LIST_GET_FIRST(&task->logs);
-    printf("Logs from task %s:\n", task->name);
+    log = FT_LIST_GET_FIRST(&task->intern.logs);
+    printf("Logs from task %s:\n", task->parser.name);
     while (log)
     {
         printf("%s\n", log->log);
-        log = FT_LIST_GET_NEXT(&task->logs, log);
+        log = FT_LIST_GET_NEXT(&task->intern.logs, log);
     }
 }
 
@@ -105,10 +106,10 @@ void delete_logs(task_t* task)
 {
     log_t* log = NULL;
 
-    while (FT_LIST_GET_SIZE(&task->logs) > 0)
+    while (FT_LIST_GET_SIZE(&task->intern.logs) > 0)
     {
-        log = FT_LIST_GET_FIRST(&task->logs);
-        FT_LIST_POP(&task->logs, log);
+        log = FT_LIST_GET_FIRST(&task->intern.logs);
+        FT_LIST_POP(&task->intern.logs, log);
         free(log);
     }
 }
@@ -172,7 +173,7 @@ void check_if_start(task_t* task)
     /*
         Autostart only start when stopped, otherwise don't do anything
     */
-    if (task->autostart == true && task->state == STOPPED)
+    if (task->parser.autostart == true && task->intern.state == STOPPED)
     {
         if (start_task(task) == -1)
         {
@@ -210,9 +211,9 @@ static void cleanup(task_t* tasks)
     task_t* task = tasks;
     while (task)
     {
-        if (task->state == RUNNING)
+        if (task->intern.state == RUNNING)
         {
-            kill(task->pid, SIGKILL);
+            kill(task->intern.pid, SIGKILL);
         }
         delete_logs(task);
         task = FT_LIST_GET_NEXT(&tasks, task);
@@ -221,8 +222,8 @@ static void cleanup(task_t* tasks)
 
 void update_task_state(task_t* task, task_state state)
 {
-    task->prev_state = task->state;
-    task->state = state;
+    task->intern.prev_state = task->intern.state;
+    task->intern.state = state;
 }
 
 int supervisor(task_t* tasks)
@@ -245,14 +246,14 @@ int supervisor(task_t* tasks)
         }
         check_if_start(task);
 
-        pid = task->pid;
+        pid = task->intern.pid;
         if (pid > 0)
         {
             int result = waitpid(pid, &status, WNOHANG);
             if (result == 0)
             {
-                if (task->state != task->prev_state)
-                    push_log(task, "Task %s is running", task->name);
+                if (task->intern.state != task->intern.prev_state)
+                    push_log(task, "Task %s is running", task->parser.name);
                 /* child running do nothing */
             }
             else if (result == -1)
@@ -267,23 +268,23 @@ int supervisor(task_t* tasks)
                 {
                     int exit_status = WEXITSTATUS(status);
                     update_task_state(task, EXITED);
-                    task->exit_status = exit_status;
-                    push_log(task, "Task %s exited with status %d", task->name, exit_status);
+                    task->intern.exit_status = exit_status;
+                    push_log(task, "Task %s exited with status %d", task->parser.name, exit_status);
                 }
                 else if (WIFSIGNALED(status))
                 {
                     int signal = WTERMSIG(status);
                     update_task_state(task, SIGNALED);
-                    task->stop_signal = signal;
-                    push_log(task, "Task %s exited with signal %d", task->name, signal);
+                    task->intern.stop_signal = signal;
+                    push_log(task, "Task %s exited with signal %d", task->parser.name, signal);
                 }
                 else
                 {
                     update_task_state(task, FATAL);
-                    push_log(task, "Task %s exited with unknown status", task->name);
+                    push_log(task, "Task %s exited with unknown status", task->parser.name);
                 }
                 /* its no more valid */
-                task->pid = -1;
+                task->intern.pid = -1;
             }
         }
 

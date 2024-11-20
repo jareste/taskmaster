@@ -146,7 +146,7 @@ void cmd_active(void* param)
         task_t* task = tasks;
         while (task)
         {
-            printf("\t- %s :\t%s\n", task->name, get_state_string(task->state));
+            printf("\t- %s :\t%s\n", task->parser.name, get_state_string(task->intern.state));
             task = FT_LIST_GET_NEXT(&tasks, task);
         }
     }
@@ -170,7 +170,7 @@ void cmd_start(void* param)
         task_t* task = tasks;
         while (task)
         {
-            if (strcmp(task->name, task_name) == 0)
+            if (strcmp(task->parser.name, task_name) == 0)
             {
                 update_task_cmd_state(task, CMD_START);
                 return;
@@ -233,7 +233,7 @@ void cmd_print_logs(void* param)
         task_t* task = tasks;
         while (task)
         {
-            if (strcmp(task->name, task_name) == 0)
+            if (strcmp(task->parser.name, task_name) == 0)
             {
                 print_logs(task);
                 return;
@@ -247,7 +247,7 @@ void cmd_print_logs(void* param)
         task_t* task = tasks;
         while (task)
         {
-            printf("\n#################### %s ####################\n", task->name);
+            printf("\n#################### %s ####################\n", task->parser.name);
             print_logs(task);
             task = FT_LIST_GET_NEXT(&tasks, task);
         }
