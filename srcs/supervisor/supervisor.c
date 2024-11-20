@@ -14,13 +14,19 @@ pthread_mutex_t g_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 void update_task_state(task_t* task, task_state state);
 void push_log(task_t* task, const char* format, ...);
-static void cleanup(task_t* tasks);
+static void cleanup(task_t* tasks, bool kill_all);
 
 int start_task(task_t* task)
 {
-    int pipefd[2];
+    int pipefd[2]; /* used just for tracing unexpected errors */
     int pid = 0;
     char buffer[1024];
+
+    if (task->intern.state == RUNNING)
+    {
+        push_log(task, "Task %s is already running", task->parser.name);
+        return 0;
+    }
 
     push_log(task, "Starting task %s", task->parser.name);
     update_task_state(task, STARTING);
@@ -39,17 +45,12 @@ int start_task(task_t* task)
         /* if we gotta redirect something
          * do it here so father its clear
          */
-        
-        /* clear everything before child run and die */
-        // char* task_cmd = strdup(task->cmd);
-        // cleanup(task);
-
         execve(task->parser.cmd, task->parser.args, task->parser.env);
         
         snprintf(buffer, sizeof(buffer), "Failed to start task %s due to %s.", task->parser.name, strerror(errno));
         write(pipefd[1], buffer, strlen(buffer));
         close(pipefd[1]);
-        cleanup(task);
+        cleanup(task, false);
         exit(EXIT_FAILURE);
     }
     else if (pid < 0)
@@ -219,6 +220,8 @@ void check_if_start(task_t* task)
     else if (task->intern.cmd_request == CMD_RESTART)
     {
         stop_task(task->parser.name);
+        update_task_state(task, STOPPED);
+        /* upgrade this logic to handle signaling log */
         start_task(task);
         update_task_cmd_state(task, CMD_NONE);
     }
@@ -231,14 +234,14 @@ void kill_me()
 }
 
 /* unsafe to call from outside supervisor. */
-static void cleanup(task_t* tasks)
+static void cleanup(task_t* tasks, bool kill_all)
 {
     task_t* task = tasks;
     while (task)
     {
-        if (task->intern.state == RUNNING)
+        if (task->intern.state == RUNNING && kill_all == true)
         {
-            kill(task->intern.pid, SIGKILL);
+            kill(task->intern.pid, task->parser.stopsignal);
         }
         delete_logs(task);
         task = FT_LIST_GET_NEXT(&tasks, task);
@@ -277,12 +280,12 @@ int supervisor(task_t* tasks)
             int result = waitpid(pid, &status, WNOHANG);
             if (result == 0)
             {
+                /* child running do nothing */
                 if (task->intern.state != task->intern.prev_state)
                 {
                     task->intern.prev_state = task->intern.state;
                     push_log(task, "Task %s is running", task->parser.name);
                 }
-                /* child running do nothing */
             }
             else if (result == -1)
             {
@@ -321,7 +324,7 @@ int supervisor(task_t* tasks)
         task = FT_LIST_GET_NEXT(&tasks, task);
     }
 
-    cleanup(tasks);
+    cleanup(tasks, true);
 
     return 0;
 }

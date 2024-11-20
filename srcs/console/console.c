@@ -14,6 +14,7 @@ void cmd_print_logs(void* param);
 void cmd_kill_supervisor(void* param);
 void cmd_start(void* param);
 void cmd_new(void* param); /* TODO */
+void cmd_restart(void* param); /* TODO */
 
 typedef struct {
     const char* name;
@@ -23,14 +24,15 @@ typedef struct {
 
 command_t commands[] = {
     {"help", cmd_help, "Show this help menu"},
+    {"new", cmd_new, "Create a new task"}, /* TODO */
     {"status", cmd_active, "Show tasks status"},
+    {"start", cmd_start, "Start a specific task by name"},
     {"stop", cmd_stop, "Stop a specific task by name"},
-    {"update", cmd_update, "Re-read the configuration file"},
-    {"kms", cmd_kms, "Kill the master supervisor"},
+    {"restart", cmd_restart, "Restart a specific task by name"},
+    {"update", cmd_update, "Re-read the configuration file"}, /* TODO */
     {"logs", cmd_print_logs, "Print logs for a specific task or all tasks"},
     {"kill", cmd_kill_supervisor, "Kill the supervisor"},
-    {"start", cmd_start, "Start a specific task by name"},
-    {"new", cmd_new, "Create a new task"},
+    {"kms", cmd_kms, "Kill the master supervisor"},
     {NULL, NULL, NULL}
 };
 
@@ -43,6 +45,12 @@ command_t* find_command(const char* name)
             return cmd;
         }
     }
+
+    if (strcmp(name, "ls") == 0 || strcmp(name, "?") == 0)
+    {
+        return commands;
+    }
+
     return NULL;
 }
 
@@ -158,6 +166,36 @@ void cmd_active(void* param)
     }
 }
 
+void cmd_restart(void* param)
+{
+    if (param == NULL)
+    {
+        fprintf(stdout, "Usage: restart <task_name>\n");
+        return;
+    }
+    const char* task_name = (const char*)param;
+    task_t* tasks = get_active_tasks();
+    if (tasks)
+    {
+        task_t* task = tasks;
+        while (task)
+        {
+            if (strcmp(task->parser.name, task_name) == 0)
+            {
+                fprintf(stdout, "Restart of task %s requested.\n", task_name);
+                update_task_cmd_state(task, CMD_RESTART);
+                return;
+            }
+            task = FT_LIST_GET_NEXT(&tasks, task);
+        }
+        fprintf(stdout, "Task not found: %s\n", task_name);
+    }
+    else
+    {
+        fprintf(stdout, "No active tasks.\n");
+    }
+}
+
 void cmd_start(void* param)
 {
     if (param == NULL)
@@ -174,6 +212,7 @@ void cmd_start(void* param)
         {
             if (strcmp(task->parser.name, task_name) == 0)
             {
+                fprintf(stdout, "Start of task %s requested.\n", task_name);
                 update_task_cmd_state(task, CMD_START);
                 return;
             }
@@ -203,6 +242,7 @@ void cmd_stop(void* param)
         {
             if (strcmp(task->parser.name, task_name) == 0)
             {
+                fprintf(stdout, "Stop of task %s requested.\n", task_name);
                 update_task_cmd_state(task, CMD_STOP);
                 return;
             }

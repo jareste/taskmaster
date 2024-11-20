@@ -56,7 +56,7 @@ int main()
     char *args3[] = {"ping", "-c 4 google.es", NULL};
     char *env3[] = {"HOME=/usr/bin", "LOGNAME=bin", "PATH=/usr/bin", NULL};
     char *argv[] = {"/bin/sh", "-c", "while :; do sleep 1; done", NULL};
-    char *envp[] = {NULL};
+    char *envp[] = {"HOME=/usr/bin", "LOGNAME=bin", "PATH=/usr/bin", NULL};
 
     task_t m_tasks1 = {
             .parser.name = "task1",
