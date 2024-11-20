@@ -183,7 +183,7 @@ int stop_task(const char* task_name)
             {
                 if (task->intern.state == RUNNING)
                 {
-                    kill(task->intern.pid, SIGUSR2);
+                    kill(task->intern.pid, task->parser.stopsignal);
                 }
                 return 0;
             }
@@ -213,7 +213,6 @@ void check_if_start(task_t* task)
     }
     else if (task->intern.cmd_request == CMD_STOP)
     {
-        fprintf(stdout, "Stopping task %s\n", task->parser.name);
         stop_task(task->parser.name);
         update_task_cmd_state(task, CMD_NONE);
     }
