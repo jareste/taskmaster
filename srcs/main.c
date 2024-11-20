@@ -72,8 +72,8 @@ int main()
             .parser.exitcodes = exitcodes1,
             .parser.stopsignal = 0,
             .parser.stoptimeout = 1,
-            .parser.stdout = 1,
-            .parser.stderr = 1,
+            .parser.stdout = "/dev/null",
+            .parser.stderr = "/dev/null",
             .intern.state = STOPPED
     };
     task_t m_tasks2 = {
@@ -90,8 +90,8 @@ int main()
             .parser.exitcodes = exitcodes2,
             .parser.stopsignal = 0,
             .parser.stoptimeout = 2,
-            .parser.stdout = 1,
-            .parser.stderr = 1,
+            .parser.stdout = "/dev/null",
+            .parser.stderr = "/dev/null",
             .intern.state = STOPPED
     };
     task_t m_tasks3 = {
@@ -108,8 +108,8 @@ int main()
             .parser.exitcodes = exitcodes3,
             .parser.stopsignal = 0,
             .parser.stoptimeout = 3,
-            .parser.stdout = 1,
-            .parser.stderr = 1,
+            .parser.stdout = "/dev/null",
+            .parser.stderr = "/dev/null",
             .intern.state = STOPPED
     };
     task_t m_tasks4 = {
@@ -126,8 +126,8 @@ int main()
         .parser.exitcodes = exitcodes1,
         .parser.stopsignal = 0,
         .parser.stoptimeout = 1,
-        .parser.stdout = 1,
-        .parser.stderr = 1,
+        .parser.stdout = "/dev/null",
+        .parser.stderr = "/dev/null",
         .intern.state = STOPPED
     };
 

@@ -6,6 +6,12 @@
 
 typedef enum
 {
+    true,
+    false
+} bool;
+
+typedef enum
+{
     STOPPED,
     STARTING,
     RUNNING,
@@ -24,12 +30,6 @@ typedef enum
     CMD_STOP,
     CMD_RESTART,
 } cmd_request;
-
-typedef enum
-{
-    true,
-    false
-} bool;
 
 typedef enum
 {
@@ -53,6 +53,9 @@ typedef struct
     char**      args; /* args of the process */
     char*       dir; /* where should we chdir */
     char**      env; /* environment */
+    char*       stdout; /* where to write stdout */
+    char*       stderr; /* wher the stderr should be written */
+    int         dtach; /* run with dtach (this overwrites stdout and stderr) */
     bool        autostart; /* autostart or wait CLI order? */
     AR_modes    ar; /* when to autorestart */
     int         startretries; /* if it fails to start how many times should we try? */
@@ -61,8 +64,6 @@ typedef struct
     int*        exitcodes; /* valid exit codes of the process, any other must be informed */
     int         stopsignal; /* signal to stop the process */
     int         stoptimeout; /* when to stop it? */
-    int         stdout; /* where to write stdout */
-    int         stderr; /* wher the stderr should be written */
 } parser_t;
 
 typedef struct

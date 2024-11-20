@@ -170,35 +170,6 @@ void delete_logs(task_t* task)
     }
 }
 
-void force_start_task(task_t* task)
-{
-    /* able to be called from console, put a mutex here */
-    switch (task->intern.state)
-    {
-        case RUNNING:
-            push_log(task, "Task %s is already running", task->parser.name);
-            break;
-        case STARTING:
-            push_log(task, "Task %s is starting, cannot start it now", task->parser.name);
-            break;
-        case STOPPING:
-            push_log(task, "Task %s is stopping, cannot start it now", task->parser.name);
-            break;
-        case FATAL:
-        case EXITED:
-        case SIGNALED:
-        case UNKNOWN:
-        case BACKOFF:
-        case STOPPED:
-            if (start_task(task) == -1)
-            {
-                /* Fatal. stop all tasks and exit */
-                ft_assert(0, "A task failed on launch, something bad going on.");
-            }
-            break;
-    }
-}
-
 int stop_task(const char* task_name)
 {
     /* protect it with mutex it can be used from outside!! */
@@ -212,9 +183,8 @@ int stop_task(const char* task_name)
             {
                 if (task->intern.state == RUNNING)
                 {
-                    kill(task->intern.pid, SIGKILL);
+                    kill(task->intern.pid, SIGUSR2);
                 }
-                task->intern.state = STOPPED;
                 return 0;
             }
             task = FT_LIST_GET_NEXT(&tasks, task);
