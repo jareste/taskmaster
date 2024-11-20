@@ -19,7 +19,7 @@ int start_task(task_t* task)
 {
     int pid = 0;
 
-    push_log(task, "Starting task %s", task->name);
+    push_log(task, "Starting task %s", task->parser.name);
     update_task_state(task, STARTING);
     
     pid = fork();
@@ -60,7 +60,7 @@ void update_task_cmd_state(task_t* task, cmd_request cmd)
 {
     /* put mutex here */
     pthread_mutex_lock(&g_mutex);
-    task->cmd_request = cmd;
+    task->intern.cmd_request = cmd;
     pthread_mutex_unlock(&g_mutex);
 }
 
@@ -117,16 +117,16 @@ void delete_logs(task_t* task)
 void force_start_task(task_t* task)
 {
     /* able to be called from console, put a mutex here */
-    switch (task->state)
+    switch (task->intern.state)
     {
         case RUNNING:
-            push_log(task, "Task %s is already running", task->name);
+            push_log(task, "Task %s is already running", task->parser.name);
             break;
         case STARTING:
-            push_log(task, "Task %s is starting, cannot start it now", task->name);
+            push_log(task, "Task %s is starting, cannot start it now", task->parser.name);
             break;
         case STOPPING:
-            push_log(task, "Task %s is stopping, cannot start it now", task->name);
+            push_log(task, "Task %s is stopping, cannot start it now", task->parser.name);
             break;
         case FATAL:
         case EXITED:
@@ -153,13 +153,13 @@ int stop_task(const char* task_name)
         task_t* task = tasks;
         while (task)
         {
-            if (strcmp(task->name, task_name) == 0)
+            if (strcmp(task->parser.name, task_name) == 0)
             {
-                if (task->state == RUNNING)
+                if (task->intern.state == RUNNING)
                 {
-                    kill(task->pid, SIGKILL);
+                    kill(task->intern.pid, SIGKILL);
                 }
-                task->state = STOPPED;
+                task->intern.state = STOPPED;
                 return 0;
             }
             task = FT_LIST_GET_NEXT(&tasks, task);
@@ -181,19 +181,19 @@ void check_if_start(task_t* task)
             ft_assert(0, "A task failed on launch, something bad going on.");
         }
     }
-    if (task->cmd_request == CMD_START)
+    if (task->intern.cmd_request == CMD_START)
     {
         start_task(task);
         update_task_cmd_state(task, CMD_NONE);
     }
-    else if (task->cmd_request == CMD_STOP)
+    else if (task->intern.cmd_request == CMD_STOP)
     {
-        stop_task(task->name);
+        stop_task(task->parser.name);
         update_task_cmd_state(task, CMD_NONE);
     }
-    else if (task->cmd_request == CMD_RESTART)
+    else if (task->intern.cmd_request == CMD_RESTART)
     {
-        stop_task(task->name);
+        stop_task(task->parser.name);
         start_task(task);
         update_task_cmd_state(task, CMD_NONE);
     }
