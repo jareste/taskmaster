@@ -3,8 +3,8 @@
 #include <stdlib.h>
 #include <taskmaster.h>
 #include <signal.h>
+#include <unistd.h>
 
-// Command function prototypes
 void cmd_help(void* param);
 void cmd_active(void* param);
 void cmd_stop(void* param);
@@ -56,51 +56,78 @@ command_t* find_command(const char* name)
 
 void* interactive_console(void* param)
 {
+    int* pipefd = (int*)param;
     char input[256];
-    (void)param;
 
-    fprintf(stdout,"Interactive Console. Type 'help' for a list of commands.\n");
+    fprintf(stdout, "Interactive Console. Type 'help' for a list of commands.\n");
     fflush(stdout);
 
     while (1)
     {
         fprintf(stdout, "-> ");
         fflush(stdout);
-        if (fgets(input, sizeof(input), stdin) == NULL)
-        {
-            break; // Handle EOF or error
-        }
+        
+        /* Propper threat cancelation ZzzzZZZzzz */
+        fd_set readfds;
+        FD_ZERO(&readfds);
+        FD_SET(STDIN_FILENO, &readfds);
+        FD_SET(pipefd[0], &readfds);
 
-        input[strcspn(input, "\n")] = 0;
+        int maxfd = (STDIN_FILENO > pipefd[0]) ? STDIN_FILENO : pipefd[0];
 
-        if (strcmp(input, "exit") == 0)
+        int retval = select(maxfd + 1, &readfds, NULL, NULL, NULL);
+        if (retval == -1)
         {
+            perror("select");
             break;
         }
 
-        char* cmd_name = strtok(input, " ");
-        char* arg = strtok(NULL, "");
-
-        if (cmd_name == NULL)
+        if (FD_ISSET(pipefd[0], &readfds))
         {
-            continue;
+            char buf[4];
+            read(pipefd[0], buf, 4);
+            break;
         }
+        /* Propper threat cancelation ZzzzZZZzzz */
 
-        command_t* cmd = find_command(cmd_name);
-        if (cmd != NULL)
+        if (FD_ISSET(STDIN_FILENO, &readfds))
         {
-            if (arg)
+            if (fgets(input, sizeof(input), stdin) == NULL)
             {
-                cmd->func(arg);
+                break;
+            }
+
+            input[strcspn(input, "\n")] = 0;
+
+            if (strcmp(input, "exit") == 0)
+            {
+                break;
+            }
+
+            char* cmd_name = strtok(input, " ");
+            char* arg = strtok(NULL, "");
+
+            if (cmd_name == NULL)
+            {
+                continue;
+            }
+
+            command_t* cmd = find_command(cmd_name);
+            if (cmd != NULL)
+            {
+                if (arg)
+                {
+                    cmd->func(arg);
+                }
+                else
+                {
+                    cmd->func(NULL);
+                }
             }
             else
             {
-                cmd->func(NULL);
+                fprintf(stdout, "Unknown command: '%s'. Type 'help' for a list of commands.\n", cmd_name);
             }
-        }
-        else
-        {
-            fprintf(stdout, "Unknown command: '%s'. Type 'help' for a list of commands.\n", cmd_name);
         }
     }
 
@@ -109,7 +136,6 @@ void* interactive_console(void* param)
 
     return NULL;
 }
-
 char* get_state_string(task_state ts)
 {
     switch (ts)

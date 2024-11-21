@@ -7,26 +7,8 @@
 #include <unistd.h>
 
 static pthread_t console_thread;
-
-//     typedef struct
-// {
-//     char*   name;
-//     char*   cmd;
-//     char*   dir;
-//     char**  env;
-//     int         autostart;
-//     autorestart autorestart;
-//     int     startretries;
-//     int     starttime;
-//     int     stoptime;
-//     int     exitcodes;
-//     int     stopsignal;
-//     int     stoptimeout;
-//     int     stdout;
-//     int     stderr;
-// } task_t;
-
 static task_t* m_active_tasks = NULL;
+int pipefd[2];
 
 task_t* get_active_tasks()
 {
@@ -39,10 +21,10 @@ void handle_sigint(int sig)
     /* this causing leaks, maybe instead communicate with the thread
      * to end it gently?
      */
-    pthread_cancel(console_thread);
     printf("Caught signal %d (SIGINT). Exiting...\n", sig);
+    /* wake up console exit condition. */
+    write(pipefd[1], "exit", 4);
 }
-
 
 int main()
 {
@@ -136,18 +118,20 @@ int main()
 
     task_t* tasks = NULL;
     /*parser*/
+
     FT_LIST_ADD_LAST(&tasks, &m_tasks1);
     FT_LIST_ADD_LAST(&tasks, &m_tasks2);
     FT_LIST_ADD_LAST(&tasks, &m_tasks3);
     FT_LIST_ADD_LAST(&tasks, &m_tasks4);
-    // (void)m_tasks4;
 
     m_active_tasks = tasks;
+
+    if (pipe(pipefd) == -1) { perror("pipe"); return 1; }
 
     /* maybe the one launched on task must be supervisor?
      * so i can kill/relaunch it from console
      */
-    pthread_create(&console_thread, NULL, interactive_console, NULL);
+    pthread_create(&console_thread, NULL, interactive_console, (void*)pipefd);
 
     supervisor(tasks);
 
