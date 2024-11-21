@@ -36,6 +36,9 @@ task_t* get_active_tasks()
 void handle_sigint(int sig)
 {
     kill_me();
+    /* this causing leaks, maybe instead communicate with the thread
+     * to end it gently?
+     */
     pthread_cancel(console_thread);
     printf("Caught signal %d (SIGINT). Exiting...\n", sig);
 }
@@ -44,7 +47,7 @@ void handle_sigint(int sig)
 int main()
 {
     signal(SIGINT, handle_sigint);
-    
+
     int exitcodes1[] = {0,2,3};
     int exitcodes2[] = {1,2};
     int exitcodes3[] = {127,3};
@@ -72,8 +75,8 @@ int main()
             .parser.exitcodes = exitcodes1,
             .parser.stopsignal = 15,
             .parser.stoptimeout = 1,
-            .parser.stdout = "/dev/null",
-            .parser.stderr = "/dev/null",
+            .parser.stdout = "/workspaces/taskmaster/outputs/task1",
+            .parser.stderr = "/workspaces/taskmaster/outputs/task1_error",
             .intern.state = STOPPED
     };
     task_t m_tasks2 = {
@@ -91,7 +94,7 @@ int main()
             .parser.stopsignal = 15,
             .parser.stoptimeout = 2,
             .parser.stdout = "/dev/null",
-            .parser.stderr = "/dev/null",
+            .parser.stderr = "/workspaces/taskmaster/outputs/task2_error",
             .intern.state = STOPPED
     };
     task_t m_tasks3 = {
@@ -109,7 +112,7 @@ int main()
             .parser.stopsignal = 15,
             .parser.stoptimeout = 3,
             .parser.stdout = "/dev/null",
-            .parser.stderr = "/dev/null",
+            .parser.stderr = "/workspaces/taskmaster/outputs/task3_error",
             .intern.state = STOPPED
     };
     task_t m_tasks4 = {
@@ -137,16 +140,17 @@ int main()
     FT_LIST_ADD_LAST(&tasks, &m_tasks2);
     FT_LIST_ADD_LAST(&tasks, &m_tasks3);
     FT_LIST_ADD_LAST(&tasks, &m_tasks4);
+    // (void)m_tasks4;
 
     m_active_tasks = tasks;
 
+    /* maybe the one launched on task must be supervisor?
+     * so i can kill/relaunch it from console
+     */
     pthread_create(&console_thread, NULL, interactive_console, NULL);
 
     supervisor(tasks);
 
-    // sleep(10);
-
-    // pthread_cancel(console_thread);
     pthread_join(console_thread, NULL);
 
     printf("Hello world\n");

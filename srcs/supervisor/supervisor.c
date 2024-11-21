@@ -5,6 +5,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include <errno.h>
+#include <fcntl.h>
 
 #include <ft_malloc.h>
 #include <taskmaster.h>
@@ -42,19 +43,67 @@ int start_task(task_t* task)
     if (pid == 0)
     {
         close(pipefd[0]);
-        /* if we gotta redirect something
-         * do it here so father its clear
-         */
+
+        if (task->parser.stdout != NULL)
+        {
+            int fd_out = open(task->parser.stdout, O_CREAT | O_WRONLY | O_APPEND, 0644);
+            if (fd_out == -1)
+            {
+                snprintf(buffer, sizeof(buffer), "Failed to open stdout file %s: %s", 
+                         task->parser.stdout, strerror(errno));
+                write(pipefd[1], buffer, strlen(buffer));
+                close(pipefd[1]);
+                exit(EXIT_FAILURE);
+            }
+            dup2(fd_out, STDOUT_FILENO);
+            close(fd_out);
+        }
+        else
+        {
+            int fd_out = open("/dev/null", O_WRONLY);
+            if (fd_out != -1)
+            {
+                dup2(fd_out, STDOUT_FILENO);
+                close(fd_out);
+            }
+        }
+
+        if (task->parser.stderr != NULL)
+        {
+            int fd_err = open(task->parser.stderr, O_CREAT | O_WRONLY | O_APPEND, 0644);
+            if (fd_err == -1)
+            {
+                snprintf(buffer, sizeof(buffer), "Failed to open stderr file %s: %s", 
+                         task->parser.stderr, strerror(errno));
+                write(pipefd[1], buffer, strlen(buffer));
+                close(pipefd[1]);
+                exit(EXIT_FAILURE);
+            }
+            dup2(fd_err, STDERR_FILENO);
+            close(fd_err);
+        }
+        else
+        {
+            int fd_err = open("/dev/null", O_WRONLY);
+            if (fd_err != -1)
+            {
+                dup2(fd_err, STDERR_FILENO);
+                close(fd_err);
+            }
+        }
+
         execve(task->parser.cmd, task->parser.args, task->parser.env);
-        
-        snprintf(buffer, sizeof(buffer), "Failed to start task %s due to %s.", task->parser.name, strerror(errno));
+
+        snprintf(buffer, sizeof(buffer), "Failed to start task %s due to %s.", 
+                 task->parser.name, strerror(errno));
         write(pipefd[1], buffer, strlen(buffer));
         close(pipefd[1]);
-        cleanup(task, false);
+        cleanup(get_active_tasks(), false);
         exit(EXIT_FAILURE);
     }
     else if (pid < 0)
     {
+        // Fork failed
         update_task_state(task, FATAL);
         close(pipefd[0]);
         close(pipefd[1]);
@@ -62,6 +111,7 @@ int start_task(task_t* task)
     }
     else
     {
+        // Parent process
         close(pipefd[1]);
 
         fd_set readfds;

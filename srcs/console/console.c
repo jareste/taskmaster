@@ -32,7 +32,7 @@ command_t commands[] = {
     {"update", cmd_update, "Re-read the configuration file"}, /* TODO */
     {"logs", cmd_print_logs, "Print logs for a specific task or all tasks"},
     {"kill", cmd_kill_supervisor, "Kill the supervisor"},
-    {"kms", cmd_kms, "Kill the master supervisor"},
+    {"kms", cmd_kms, "Finish the program execution."},
     {NULL, NULL, NULL}
 };
 

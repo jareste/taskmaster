@@ -3,6 +3,7 @@
 
 #include <ft_list.h>
 #include <pthread.h>
+#include <sys/types.h>
 
 typedef enum
 {
@@ -55,6 +56,7 @@ typedef struct
     char**      env; /* environment */
     char*       stdout; /* where to write stdout */
     char*       stderr; /* wher the stderr should be written */
+    bool        append_out; /* append outputs or just create new ones? */
     int         dtach; /* run with dtach (this overwrites stdout and stderr) */
     bool        autostart; /* autostart or wait CLI order? */
     AR_modes    ar; /* when to autorestart */
@@ -64,6 +66,7 @@ typedef struct
     int*        exitcodes; /* valid exit codes of the process, any other must be informed */
     int         stopsignal; /* signal to stop the process */
     int         stoptimeout; /* when to stop it? */
+    int         umask; /* umask of the process */
 } parser_t;
 
 typedef struct
@@ -97,5 +100,6 @@ task_t* get_active_tasks();
 void* interactive_console(void* param);
 void kill_me();
 void update_task_cmd_state(task_t* task, cmd_request cmd);
+void cmd_kms(void* param);
 
 #endif /* TASKMASTER_H */

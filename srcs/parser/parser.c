@@ -113,9 +113,33 @@ char* parse_string(char* str)
     return (str);
 }
 
-char** parse_env(char* str)
+char** parse_array(char* str)
 {
     return NULL;
+}
+
+t_task* new_task()
+{
+    t_task* task = (t_task*)malloc(sizeof(t_task));
+    if (task == NULL)
+        return (NULL);
+    task->name = NULL;
+    task->cmd = NULL;
+    task->args = NULL;
+    task->dir = NULL;
+    task->env = NULL;
+    task->stdout = NULL;
+    task->stderr = NULL;
+    task->autostart = true;
+    task->autorestart = ALWAYS;
+    task->startretries = 0;
+    task->starttime = 0;
+    task->stoptime = 0;
+    task->exitcodes = NULL;
+    task->stopsignal = 0;
+    task->stoptimeout = 0;
+    task->umask = 0;
+    return (task);
 }
 
 autorestart parse_autorestart(char* str)
