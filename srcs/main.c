@@ -21,7 +21,7 @@ void handle_sigint(int sig)
     /* this causing leaks, maybe instead communicate with the thread
      * to end it gently?
      */
-    printf("Caught signal %d (SIGINT). Exiting...\n", sig);
+    printf("\nCaught signal %d (SIGINT). Exiting...\n", sig);
     /* wake up console exit condition. */
     write(pipefd[1], "exit", 4);
 }

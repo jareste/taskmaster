@@ -102,4 +102,6 @@ void kill_me();
 void update_task_cmd_state(task_t* task, cmd_request cmd);
 void cmd_kms(void* param);
 
+char* get_autorestart_str(AR_modes ar);
+
 #endif /* TASKMASTER_H */

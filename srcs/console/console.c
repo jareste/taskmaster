@@ -15,6 +15,8 @@ void cmd_kill_supervisor(void* param);
 void cmd_start(void* param);
 void cmd_new(void* param); /* TODO */
 void cmd_restart(void* param); /* TODO */
+void cmd_show_task(void* task);
+void cmd_modify_task(void* param); /* TODO */
 
 typedef struct {
     const char* name;
@@ -33,8 +35,32 @@ command_t commands[] = {
     {"logs", cmd_print_logs, "Print logs for a specific task or all tasks"},
     {"kill", cmd_kill_supervisor, "Kill the supervisor"},
     {"kms", cmd_kms, "Finish the program execution."},
+    {"show", cmd_show_task, "Show task details."},
+    {"modify", cmd_modify_task, "Modify task details."}, /* TODO */
     {NULL, NULL, NULL}
 };
+
+task_t* get_task_from_name(const char* name)
+{
+    task_t* tasks = get_active_tasks();
+    if (tasks)
+    {
+        task_t* task = tasks;
+        while (task)
+        {
+            if (strcmp(task->parser.name, name) == 0)
+            {
+                return task;
+            }
+            task = FT_LIST_GET_NEXT(&tasks, task);
+        }
+    }
+    else
+    {
+        fprintf(stdout, "No active tasks.\n");
+    }
+    return NULL;
+}
 
 command_t* find_command(const char* name)
 {
@@ -200,25 +226,15 @@ void cmd_restart(void* param)
         return;
     }
     const char* task_name = (const char*)param;
-    task_t* tasks = get_active_tasks();
-    if (tasks)
+    task_t* task = get_task_from_name(task_name);
+    if (task)
     {
-        task_t* task = tasks;
-        while (task)
-        {
-            if (strcmp(task->parser.name, task_name) == 0)
-            {
-                fprintf(stdout, "Restart of task %s requested.\n", task_name);
-                update_task_cmd_state(task, CMD_RESTART);
-                return;
-            }
-            task = FT_LIST_GET_NEXT(&tasks, task);
-        }
-        fprintf(stdout, "Task not found: %s\n", task_name);
+        fprintf(stdout, "Restart of task %s requested.\n", task_name);
+        update_task_cmd_state(task, CMD_RESTART);
     }
     else
     {
-        fprintf(stdout, "No active tasks.\n");
+        fprintf(stdout, "Requested task not found\n");
     }
 }
 
@@ -230,25 +246,15 @@ void cmd_start(void* param)
         return;
     }
     const char* task_name = (const char*)param;
-    task_t* tasks = get_active_tasks();
-    if (tasks)
+    task_t* task = get_task_from_name(task_name);
+    if (task)
     {
-        task_t* task = tasks;
-        while (task)
-        {
-            if (strcmp(task->parser.name, task_name) == 0)
-            {
-                fprintf(stdout, "Start of task %s requested.\n", task_name);
-                update_task_cmd_state(task, CMD_START);
-                return;
-            }
-            task = FT_LIST_GET_NEXT(&tasks, task);
-        }
-        fprintf(stdout, "Task not found: %s\n", task_name);
+        fprintf(stdout, "Start of task %s requested.\n", task_name);
+        update_task_cmd_state(task, CMD_START);
     }
     else
     {
-        fprintf(stdout, "No active tasks.\n");
+        fprintf(stdout, "Requested task not found\n");
     }
 }
 
@@ -260,25 +266,15 @@ void cmd_stop(void* param)
         return;
     }
     const char* task_name = (const char*)param;
-    task_t* tasks = get_active_tasks();
-    if (tasks)
+    task_t* task = get_task_from_name(task_name);
+    if (task)
     {
-        task_t* task = tasks;
-        while (task)
-        {
-            if (strcmp(task->parser.name, task_name) == 0)
-            {
-                fprintf(stdout, "Stop of task %s requested.\n", task_name);
-                update_task_cmd_state(task, CMD_STOP);
-                return;
-            }
-            task = FT_LIST_GET_NEXT(&tasks, task);
-        }
-        fprintf(stdout, "Task not found: %s\n", task_name);
+        fprintf(stdout, "Stop of task %s requested.\n", task_name);
+        update_task_cmd_state(task, CMD_STOP);
     }
     else
     {
-        fprintf(stdout, "No active tasks.\n");
+        fprintf(stdout, "Requested task not found\n");
     }
 }
 
@@ -353,4 +349,90 @@ void cmd_new(void* param)
     // {
     //     printf("Failed to create new task.\n");
     // }
+}
+
+void print_task(task_t* task)
+{    
+    fprintf(stdout, "Task name: %s\n", task->parser.name);
+    fprintf(stdout, "Command: %s\n", task->parser.cmd);
+    fprintf(stdout, "Directory: %s\n", task->parser.dir);
+    fprintf(stdout, "Environment:\n");
+    for (size_t i = 0; task->parser.env[i]; ++i)
+    {
+        fprintf(stdout, "\t%s\n", task->parser.env[i]);
+    }
+    fprintf(stdout, "Autostart: %s\n", task->parser.autostart ? "true" : "false");
+    fprintf(stdout, "Autorestart: %s\n", get_autorestart_str(task->parser.ar));
+    fprintf(stdout, "Startretries: %d\n", task->parser.startretries);
+    fprintf(stdout, "Starttime: %d\n", task->parser.starttime);
+    fprintf(stdout, "Stoptime: %d\n", task->parser.stoptime);
+    fprintf(stdout, "Exitcodes:\n");
+    for (size_t i = 0; task->parser.exitcodes[i]; ++i)
+    {
+        fprintf(stdout, "\t%d\n", task->parser.exitcodes[i]);
+    }
+    fprintf(stdout, "Stopsignal: %d\n", task->parser.stopsignal);
+    fprintf(stdout, "Stoptimeout: %d\n", task->parser.stoptimeout);
+    fprintf(stdout, "Stdout: %s\n", task->parser.stdout);
+    fprintf(stdout, "Stderr: %s\n", task->parser.stderr);
+    fprintf(stdout, "Umask: %d\n", task->parser.umask);
+
+}
+
+void cmd_show_task(void* task)
+{
+    const char* task_name = (const char*)task;
+    if (task_name)
+    {
+        task_t* t = get_task_from_name(task_name);
+        if (t)
+        {
+            print_task(t);
+        }
+        else
+        {
+            fprintf(stdout, "Task not found: %s\n", task_name);
+        }
+    }
+    else
+    {
+        task_t* tasks = get_active_tasks();
+        task_t* t = tasks;
+        while (t)
+        {
+            print_task(t);
+            t = FT_LIST_GET_NEXT(&tasks, t);
+            if (t)
+            {
+                fprintf(stdout, "\n##############################################################\n");
+            }
+        }
+    }
+}
+
+void cmd_modify_task(void* param)
+{
+    if (param == NULL)
+    {
+        fprintf(stdout, "Usage: modify <task_name>\n");
+        return;
+    }
+    const char* task_name = (const char*)param;
+    task_t* task = get_task_from_name(task_name);
+    if (task)
+    {
+        fprintf(stdout, "Modify of task %s requested.\n", task_name);
+        // if (modify_task() == 0)
+        // {
+        //     printf("Task modified.\n");
+        // }
+        // else
+        // {
+        //     printf("Failed to modify task.\n");
+        // }
+    }
+    else
+    {
+        fprintf(stdout, "Requested task not found\n");
+    }
 }
