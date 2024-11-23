@@ -15,6 +15,7 @@ void cmd_kill_supervisor(void* param);
 void cmd_start(void* param);
 void cmd_new(void* param); /* TODO */
 void cmd_restart(void* param); /* TODO */
+void cmd_delete(void* param);
 void cmd_show_task(void* task);
 void cmd_modify_task(void* param); /* TODO */
 
@@ -31,6 +32,7 @@ command_t commands[] = {
     {"start", cmd_start, "Start a specific task by name"},
     {"stop", cmd_stop, "Stop a specific task by name"},
     {"restart", cmd_restart, "Restart a specific task by name"},
+    {"delete", cmd_delete, "Delete specific task by name."},
     {"update", cmd_update, "Re-read the configuration file"}, /* TODO */
     {"logs", cmd_print_logs, "Print logs for a specific task or all tasks"},
     {"kill", cmd_kill_supervisor, "Kill the supervisor"},
@@ -218,6 +220,19 @@ void cmd_active(void* param)
     }
 }
 
+static void request_action_on_task(const char* task_name, cmd_request request)
+{
+    task_t* task = get_task_from_name(task_name);
+    if (task)
+    {
+        update_task_cmd_state(task, request);
+    }
+    else
+    {
+        fprintf(stdout, "Requested task not found\n");
+    }
+}
+
 void cmd_restart(void* param)
 {
     if (param == NULL)
@@ -225,17 +240,7 @@ void cmd_restart(void* param)
         fprintf(stdout, "Usage: restart <task_name>\n");
         return;
     }
-    const char* task_name = (const char*)param;
-    task_t* task = get_task_from_name(task_name);
-    if (task)
-    {
-        fprintf(stdout, "Restart of task %s requested.\n", task_name);
-        update_task_cmd_state(task, CMD_RESTART);
-    }
-    else
-    {
-        fprintf(stdout, "Requested task not found\n");
-    }
+    request_action_on_task((const char*)param, CMD_RESTART);
 }
 
 void cmd_start(void* param)
@@ -245,17 +250,7 @@ void cmd_start(void* param)
         fprintf(stdout, "Usage: start <task_name>\n");
         return;
     }
-    const char* task_name = (const char*)param;
-    task_t* task = get_task_from_name(task_name);
-    if (task)
-    {
-        fprintf(stdout, "Start of task %s requested.\n", task_name);
-        update_task_cmd_state(task, CMD_START);
-    }
-    else
-    {
-        fprintf(stdout, "Requested task not found\n");
-    }
+    request_action_on_task((const char*)param, CMD_START);
 }
 
 void cmd_stop(void* param)
@@ -265,17 +260,17 @@ void cmd_stop(void* param)
         fprintf(stdout, "Usage: stop <task_name>\n");
         return;
     }
-    const char* task_name = (const char*)param;
-    task_t* task = get_task_from_name(task_name);
-    if (task)
+    request_action_on_task((const char*)param, CMD_STOP);
+}
+
+void cmd_delete(void* param)
+{
+    if (param == NULL)
     {
-        fprintf(stdout, "Stop of task %s requested.\n", task_name);
-        update_task_cmd_state(task, CMD_STOP);
+        fprintf(stdout, "Usage: stop <task_name>\n");
+        return;
     }
-    else
-    {
-        fprintf(stdout, "Requested task not found\n");
-    }
+    request_action_on_task((const char*)param, CMD_DELETE);
 }
 
 void cmd_update(void* param)
@@ -352,31 +347,32 @@ void cmd_new(void* param)
 }
 
 void print_task(task_t* task)
-{    
-    fprintf(stdout, "Task name: %s\n", task->parser.name);
-    fprintf(stdout, "Command: %s\n", task->parser.cmd);
-    fprintf(stdout, "Directory: %s\n", task->parser.dir);
-    fprintf(stdout, "Environment:\n");
+{
+    const int field_width = 15; // Adjust the width as needed
+
+    fprintf(stdout, "%-*s %s\n", field_width, "Task name:", task->parser.name);
+    fprintf(stdout, "%-*s %s\n", field_width, "Command:", task->parser.cmd);
+    fprintf(stdout, "%-*s %s\n", field_width, "Directory:", task->parser.dir);
+    fprintf(stdout, "%-*s\n", field_width, "Environment:");
     for (size_t i = 0; task->parser.env[i]; ++i)
     {
         fprintf(stdout, "\t%s\n", task->parser.env[i]);
     }
-    fprintf(stdout, "Autostart: %s\n", task->parser.autostart ? "true" : "false");
-    fprintf(stdout, "Autorestart: %s\n", get_autorestart_str(task->parser.ar));
-    fprintf(stdout, "Startretries: %d\n", task->parser.startretries);
-    fprintf(stdout, "Starttime: %d\n", task->parser.starttime);
-    fprintf(stdout, "Stoptime: %d\n", task->parser.stoptime);
-    fprintf(stdout, "Exitcodes:\n");
+    fprintf(stdout, "%-*s %s\n", field_width, "Autostart:", task->parser.autostart ? "true" : "false");
+    fprintf(stdout, "%-*s %s\n", field_width, "Autorestart:", get_autorestart_str(task->parser.ar));
+    fprintf(stdout, "%-*s %d\n", field_width, "Startretries:", task->parser.startretries);
+    fprintf(stdout, "%-*s %d\n", field_width, "Starttime:", task->parser.starttime);
+    fprintf(stdout, "%-*s %d\n", field_width, "Stoptime:", task->parser.stoptime);
+    fprintf(stdout, "%-*s\n", field_width, "Exitcodes:");
     for (size_t i = 0; task->parser.exitcodes[i]; ++i)
     {
         fprintf(stdout, "\t%d\n", task->parser.exitcodes[i]);
     }
-    fprintf(stdout, "Stopsignal: %d\n", task->parser.stopsignal);
-    fprintf(stdout, "Stoptimeout: %d\n", task->parser.stoptimeout);
-    fprintf(stdout, "Stdout: %s\n", task->parser.stdout);
-    fprintf(stdout, "Stderr: %s\n", task->parser.stderr);
-    fprintf(stdout, "Umask: %d\n", task->parser.umask);
-
+    fprintf(stdout, "%-*s %d\n", field_width, "Stopsignal:", task->parser.stopsignal);
+    fprintf(stdout, "%-*s %d\n", field_width, "Stoptimeout:", task->parser.stoptimeout);
+    fprintf(stdout, "%-*s %s\n", field_width, "Stdout:", task->parser.stdout);
+    fprintf(stdout, "%-*s %s\n", field_width, "Stderr:", task->parser.stderr);
+    fprintf(stdout, "%-*s %d\n", field_width, "Umask:", task->parser.umask);
 }
 
 void cmd_show_task(void* task)

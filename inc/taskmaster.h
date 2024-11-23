@@ -30,6 +30,7 @@ typedef enum
     CMD_START,
     CMD_STOP,
     CMD_RESTART,
+    CMD_DELETE
 } cmd_request;
 
 typedef enum
