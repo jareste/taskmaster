@@ -170,5 +170,6 @@ AR_modes parse_autorestart(char* str)
         return (FAILURE);
     else if (strcasecmp(str, "never") == 0)
         return (NEVER);
-    return (UNKNOWN);
+    /* failure!!! */
+    return -1;
 }
