@@ -98,6 +98,7 @@ typedef struct
 void print_logs(task_t* task);
 int supervisor(task_t* tasks);
 task_t* get_active_tasks();
+void set_active_tasks(task_t* tasks);
 void* interactive_console(void* param);
 void kill_me();
 void update_task_cmd_state(task_t* task, cmd_request cmd);

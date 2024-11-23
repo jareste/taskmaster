@@ -3,7 +3,7 @@ NAME = taskmaster
 #########
 RM = rm -rf
 CC = cc
-CFLAGS = -Werror -Wextra -Wall -g #-fsanitize=address
+CFLAGS = -Werror -Wextra -Wall -g -fsanitize=address
 LDFLAGS = -lm -lpthread
 RELEASE_CFLAGS = $(CFLAGS) -DNDEBUG
 #########

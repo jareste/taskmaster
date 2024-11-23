@@ -167,6 +167,12 @@ void update_task_cmd_state(task_t* task, cmd_request cmd)
 {
     /* put mutex here */
     pthread_mutex_lock(&g_mutex);
+    if (task->intern.cmd_request != CMD_NONE)
+    {
+        /* we are not ready to accept new command */
+        pthread_mutex_unlock(&g_mutex);
+        return;
+    }
     task->intern.cmd_request = cmd;
     pthread_mutex_unlock(&g_mutex);
 }
@@ -244,6 +250,24 @@ int stop_task(const char* task_name)
     return -1;
 }
 
+void delete_task(task_t** task)
+{
+    task_t* tasks = get_active_tasks();
+    
+    if ((*task)->intern.state == RUNNING)
+    {
+        kill((*task)->intern.pid, SIGTERM);
+    }
+    delete_logs((*task));
+    FT_LIST_POP(&tasks, *task);
+    set_active_tasks(tasks);
+    *task = FT_LIST_GET_NEXT(&tasks, *task);
+    /* not now */
+    // free(task);
+
+    return;
+}
+
 void check_if_start(task_t* task)
 {
     /*
@@ -256,24 +280,6 @@ void check_if_start(task_t* task)
             /* Fatal. stop all tasks and exit */
             ft_assert(0, "A task failed on launch, something bad going on.");
         }
-    }
-    if (task->intern.cmd_request == CMD_START)
-    {
-        start_task(task);
-        update_task_cmd_state(task, CMD_NONE);
-    }
-    else if (task->intern.cmd_request == CMD_STOP)
-    {
-        stop_task(task->parser.name);
-        update_task_cmd_state(task, CMD_NONE);
-    }
-    else if (task->intern.cmd_request == CMD_RESTART)
-    {
-        stop_task(task->parser.name);
-        update_task_state(task, STOPPED);
-        /* upgrade this logic to handle signaling log */
-        start_task(task);
-        update_task_cmd_state(task, CMD_NONE);
     }
 }
 
@@ -304,6 +310,41 @@ void update_task_state(task_t* task, task_state state)
     task->intern.state = state;
 }
 
+int cmd_requested_action_on_task(task_t** task)
+{
+    int ret = 0;
+    switch ((*task)->intern.cmd_request)
+    {
+        case CMD_START:
+            start_task(*task);
+            ret = 1;
+            break;
+        case CMD_STOP:
+            stop_task((*task)->parser.name);
+            ret = 1;
+            break;
+        case CMD_RESTART:
+            stop_task((*task)->parser.name);
+            /* upgrade this logic to handle signaling log */
+            start_task(*task);
+            ret = 1;
+            break;
+        case CMD_DELETE:
+            /* remove it from the list */
+            delete_task(task);
+            ret = 2;
+            break;
+        case CMD_NONE:
+            return 0;
+    }
+
+    if (ret != 2)
+        update_task_cmd_state((*task), CMD_NONE);
+
+    return ret;
+}
+
+
 int supervisor(task_t* tasks)
 {
     task_t* task = NULL;
@@ -323,6 +364,23 @@ int supervisor(task_t* tasks)
             usleep(200000);
         }
         check_if_start(task);
+
+        if (cmd_requested_action_on_task(&task) != 0)
+        {
+            tasks = get_active_tasks();
+            task = tasks;
+            continue;
+        }
+
+        // if (ret != 0)
+        // {
+        //     /* something was done, let other taks enter*/
+        //     // if (ret != 2)
+        //         task = FT_LIST_GET_NEXT(&tasks, task);
+        //     // else
+        //     //     task = tasks; /* task got deleted, for safety, start again. */
+        //     continue;
+        // }
 
         pid = task->intern.pid;
         if (pid > 0)

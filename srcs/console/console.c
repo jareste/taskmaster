@@ -364,7 +364,7 @@ void print_task(task_t* task)
     fprintf(stdout, "%-*s %d\n", field_width, "Starttime:", task->parser.starttime);
     fprintf(stdout, "%-*s %d\n", field_width, "Stoptime:", task->parser.stoptime);
     fprintf(stdout, "%-*s\n", field_width, "Exitcodes:");
-    for (size_t i = 0; task->parser.exitcodes[i]; ++i)
+    for (int i = 0; i < task->parser.exitcodes[0]; ++i)
     {
         fprintf(stdout, "\t%d\n", task->parser.exitcodes[i]);
     }

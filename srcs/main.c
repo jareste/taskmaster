@@ -15,6 +15,11 @@ task_t* get_active_tasks()
     return m_active_tasks;
 }
 
+void set_active_tasks(task_t* tasks)
+{
+    m_active_tasks = tasks;
+}
+
 void handle_sigint(int sig)
 {
     kill_me();
@@ -30,9 +35,9 @@ int main()
 {
     signal(SIGINT, handle_sigint);
 
-    int exitcodes1[] = {0,2,3};
-    int exitcodes2[] = {1,2};
-    int exitcodes3[] = {127,3};
+    int exitcodes1[] = {4, 0,2,3};
+    int exitcodes2[] = {3, 1,2};
+    int exitcodes3[] = {3, 127,3};
 
     char *args[] = {"/bin/ls", "-l", "-a", NULL};
     char *env[] = {"HOME=/", "LOGNAME=home", "PATH=/usr/bin", NULL};
