@@ -27,22 +27,6 @@ typedef enum {
     NEW_EMPTY
 } new_task_return;
 
-typedef enum {
-    NEW_PARSE_STRING,
-    NEW_PARSE_INT,
-    NEW_PARSE_BOOL,
-    NEW_PARSE_ARRAY,
-    NEW_PARSE_AR
-} new_task_format;
-
-typedef enum {
-    NEW_PARAM_STRING,
-    NEW_PARAM_INT,
-    NEW_PARAM_BOOL,
-    NEW_PARAM_ARRAY,
-    NEW_PARAM_AR
-} new_task_param;
-
 typedef struct {
     const char* name;
     void (*func)(void* param);
@@ -354,14 +338,7 @@ void cmd_kill_supervisor(void* param)
     kill_me();
 }
 
-/*
- * Format:
- * 1. string
- * 2. int
- * 3. bool
- * 4. array
- */
-new_task_return parse_line(new_task_format format, void* param)
+new_task_return parse_line(task_format format, void* param)
 {
     char* line = NULL;
     size_t len = 0;
@@ -397,7 +374,7 @@ new_task_return parse_line(new_task_format format, void* param)
         *(bool*)param = (strcasecmp(line, "true") == 0) ? true : false;
         break;
     case NEW_PARSE_ARRAY:
-        *(char**)param = strdup(line);
+        *(char**)param = strdup(line); /* TODO */
         break;
     case NEW_PARSE_AR:
         *(AR_modes*)param = parse_autorestart(line);
@@ -411,8 +388,8 @@ new_task_return parse_line(new_task_format format, void* param)
     return NEW_SUCCESS;
 }
 
-int conf_parse_format(char* string, new_task_format format, void*  default_value,\
-                        void* param, new_task_param param_type, bool mandatory)
+int conf_parse_format(const char* string, task_format format, void*  default_value,\
+                        void* param, task_param param_type, bool mandatory)
 {
     fprintf(stdout, "%s: ", string);
 
@@ -458,95 +435,61 @@ int conf_parse_format(char* string, new_task_format format, void*  default_value
 void cmd_new(void* param)
 {
     (void)param;
+
     task_t* task = NEW(task_t, 1);
-    int default_int = 0;
-
-    if (task)
+    if (!task)
     {
-        fprintf(stdout, "Request to create task. Please fill details.");
-        fprintf(stdout, "Parameters with '*' are mandatory:\n");
-
-        if (conf_parse_format("Task name*", NEW_PARSE_STRING, NULL,\
-            &task->parser.name, NEW_PARAM_STRING, true) == -1)
-            goto failure;
-        
-        if (conf_parse_format("Command*", NEW_PARSE_STRING, NULL,\
-            &task->parser.cmd, NEW_PARAM_STRING, true) == -1)
-
-        fprintf(stdout, "Args format: arg1 arg2 arg3 ... argN\n");
-        if (conf_parse_format("Args", NEW_PARSE_ARRAY, NULL,\
-            &task->parser.args, NEW_PARAM_ARRAY, false) == -1)
-            goto failure;
-        
-        if (conf_parse_format("Directory", NEW_PARSE_STRING, NULL,\
-            &task->parser.dir, NEW_PARAM_STRING, false) == -1)
-            goto failure;
-        
-        fprintf(stdout, "Environment format: env1=value1 env2=value2 ... envN=valueN\n");
-        if (conf_parse_format("Environment", NEW_PARSE_ARRAY, NULL,\
-            &task->parser.env, NEW_PARAM_ARRAY, false) == -1)
-            goto failure;
-        
-        bool autorestart_default = false;
-        if (conf_parse_format("Autostart (true/false)", NEW_PARSE_BOOL, &autorestart_default,\
-            &task->parser.autostart, NEW_PARAM_BOOL, false) == -1)
-            goto failure;
-        
-        /*dtach comes here*/
-
-        AR_modes autorestart_mode = NEVER;
-        if (conf_parse_format("Autorestart (always/unexpected/success/failure/never)",\
-            NEW_PARSE_AR, &autorestart_mode,\
-            &task->parser.ar, NEW_PARAM_AR, false) == -1)
-            goto failure;
-
-        if (conf_parse_format("Startretries", NEW_PARSE_INT, &default_int,\
-            &task->parser.startretries, NEW_PARAM_INT, false) == -1)
-            goto failure;
-    
-    
-        if (conf_parse_format("Starttime", NEW_PARSE_INT, &default_int,\
-            &task->parser.starttime, NEW_PARAM_INT, false) == -1)
-            goto failure;
-    
-        if (conf_parse_format("Stoptime", NEW_PARSE_INT, &default_int,\
-            &task->parser.stoptime, NEW_PARAM_INT, false) == -1)
-            goto failure;
-
-        fprintf(stdout, "Exitcodes format: code1 code2 ... codeN\n");
-        if (conf_parse_format("Exitcodes", NEW_PARSE_ARRAY, NULL,\
-            &task->parser.exitcodes, NEW_PARAM_ARRAY, false) == -1)
-            goto failure;
-        
-        /* TODO parse properly the signal. */
-        int stopsig_default = 9;
-        if (conf_parse_format("Stopsignal", NEW_PARSE_INT, &stopsig_default,\
-            &task->parser.stopsignal, NEW_PARAM_INT, false) == -1)
-            goto failure;
-
-        
-        if (conf_parse_format("Stoptimeout", NEW_PARSE_INT, &default_int,\
-            &task->parser.stoptimeout, NEW_PARAM_INT, false) == -1)
-            goto failure;        
-        
-        if (conf_parse_format("Stdout", NEW_PARSE_STRING, NULL,\
-            &task->parser.stdout, NEW_PARAM_STRING, false) == -1)
-            goto failure;
-        
-        if (conf_parse_format("Stderr", NEW_PARSE_STRING, NULL,\
-            &task->parser.stderr, NEW_PARAM_STRING, false) == -1)
-            goto failure;
-
-        if (conf_parse_format("Umask", NEW_PARSE_INT, &default_int,\
-            &task->parser.umask, NEW_PARAM_INT, false) == -1)
-            goto failure;
-
-        add_task_to_list(task);
+        fprintf(stdout, "Error: Failed to allocate memory for the task.\n");
+        return;
     }
+
+    fprintf(stdout, "Request to create a new task. Please fill in the details.\n");
+    fprintf(stdout, "Parameters marked with '*' are mandatory.\n");
+
+    typedef struct {
+        const char* prompt;
+        int parse_type;
+        void* default_value;
+        void** target;
+        int param_type;
+        bool required;
+    } ParamConfig;
+
+    ParamConfig configs[] = {
+        {"Task name*", NEW_PARSE_STRING, NULL, (void**)&task->parser.name, NEW_PARAM_STRING, true},
+        {"Command*", NEW_PARSE_STRING, NULL, (void**)&task->parser.cmd, NEW_PARAM_STRING, true},
+        {"Args (format: arg1 arg2 ... argN)", NEW_PARSE_ARRAY, NULL, (void**)&task->parser.args, NEW_PARAM_ARRAY, false},
+        {"Directory", NEW_PARSE_STRING, NULL, (void**)&task->parser.dir, NEW_PARAM_STRING, false},
+        {"Environment (format: env1=value1 env2=value2 ...)", NEW_PARSE_ARRAY, NULL, (void**)&task->parser.env, NEW_PARAM_ARRAY, false},
+        {"Autostart (true/false)", NEW_PARSE_BOOL, &(bool){false}, (void**)&task->parser.autostart, NEW_PARAM_BOOL, false},
+        {"Autorestart (always/unexpected/success/failure/never)", NEW_PARSE_AR, &(AR_modes){NEVER}, (void**)&task->parser.ar, NEW_PARAM_AR, false},
+        {"Startretries", NEW_PARSE_INT, &(int){0}, (void**)&task->parser.startretries, NEW_PARAM_INT, false},
+        {"Starttime", NEW_PARSE_INT, &(int){0}, (void**)&task->parser.starttime, NEW_PARAM_INT, false},
+        {"Stoptime", NEW_PARSE_INT, &(int){0}, (void**)&task->parser.stoptime, NEW_PARAM_INT, false},
+        {"Exitcodes (format: code1 code2 ...)", NEW_PARSE_ARRAY, NULL, (void**)&task->parser.exitcodes, NEW_PARAM_ARRAY, false},
+        {"Stopsignal (default: 9)", NEW_PARSE_INT, &(int){9}, (void**)&task->parser.stopsignal, NEW_PARAM_INT, false},
+        {"Stoptimeout", NEW_PARSE_INT, &(int){0}, (void**)&task->parser.stoptimeout, NEW_PARAM_INT, false},
+        {"Stdout", NEW_PARSE_STRING, NULL, (void**)&task->parser.stdout, NEW_PARAM_STRING, false},
+        {"Stderr", NEW_PARSE_STRING, NULL, (void**)&task->parser.stderr, NEW_PARAM_STRING, false},
+        {"Umask", NEW_PARSE_INT, &(int){0}, (void**)&task->parser.umask, NEW_PARAM_INT, false},
+    };
+
+    for (size_t i = 0; i < sizeof(configs) / sizeof(configs[0]); i++)
+    {
+        if (conf_parse_format(configs[i].prompt, configs[i].parse_type, configs[i].default_value,
+            configs[i].target, configs[i].param_type, configs[i].required) == -1)
+        {
+            fprintf(stdout, "Error parsing parameter: %s\n", configs[i].prompt);
+            goto failure;
+        }
+    }
+
+    add_task_to_list(task);
+    fprintf(stdout, "Task created successfully.\n");
     return;
 
 failure:
-    fprintf(stdout, "Failed to create task.\n");
+    fprintf(stdout, "Failed to create task. Cleaning up resources.\n");
     free_task(task);
     return;
 }
@@ -624,29 +567,115 @@ void cmd_show_task(void* task)
     }
 }
 
+static int modify_task(task_t* task, const char* param)
+{
+    if (task == NULL || param == NULL)
+        return -1;
+
+    typedef struct
+    {
+        const char* param_name;
+        const char* prompt;
+        int parse_type;
+        void* default_value;
+        void** task_member;
+        int param_type;
+        bool required;
+        bool free;
+    } ParamConfig;
+
+    ParamConfig configs[] =
+    {
+        {"name", "Task name*", NEW_PARSE_STRING, NULL, (void**)&task->parser.name, NEW_PARAM_STRING, true, true},
+        {"cmd", "Command*", NEW_PARSE_STRING, NULL, (void**)&task->parser.cmd, NEW_PARAM_STRING, true, true},
+        {"args", "Args format: arg1 arg2 arg3 ... argN", NEW_PARSE_ARRAY, NULL, (void**)&task->parser.args, NEW_PARAM_ARRAY, false, true},
+        {"dir", "Directory", NEW_PARSE_STRING, NULL, (void**)&task->parser.dir, NEW_PARAM_STRING, false, true},
+        {"env", "Environment format: env1=value1 env2=value2 ... envN=valueN", NEW_PARSE_ARRAY, NULL, (void**)&task->parser.env, NEW_PARAM_ARRAY, false, true},
+        {"autostart", "Autostart (true/false)", NEW_PARSE_BOOL, &(bool){false}, (void**)&task->parser.autostart, NEW_PARAM_BOOL, false, false},
+        {"ar", "Autorestart (always/unexpected/success/failure/never)", NEW_PARSE_AR, &(AR_modes){NEVER}, (void**)&task->parser.ar, NEW_PARAM_AR, false, false},
+        {"startretries", "Startretries", NEW_PARSE_INT, &(int){0}, (void**)&task->parser.startretries, NEW_PARAM_INT, false, false},
+        {"starttime", "Starttime", NEW_PARSE_INT, &(int){0}, (void**)&task->parser.starttime, NEW_PARAM_INT, false, false},
+        {"stoptime", "Stoptime", NEW_PARSE_INT, &(int){0}, (void**)&task->parser.stoptime, NEW_PARAM_INT, false, false},
+        {"exitcodes", "Exitcodes format: code1 code2 ... codeN", NEW_PARSE_ARRAY, NULL, (void**)&task->parser.exitcodes, NEW_PARAM_ARRAY, false, true},
+        {"stopsignal", "Stopsignal", NEW_PARSE_INT, &(int){9}, (void**)&task->parser.stopsignal, NEW_PARAM_INT, false, false},
+        {"stoptimeout", "Stoptimeout", NEW_PARSE_INT, &(int){0}, (void**)&task->parser.stoptimeout, NEW_PARAM_INT, false, false},
+        {"stdout", "Stdout", NEW_PARSE_STRING, NULL, (void**)&task->parser.stdout, NEW_PARAM_STRING, false, true},
+        {"stderr", "Stderr", NEW_PARSE_STRING, NULL, (void**)&task->parser.stderr, NEW_PARAM_STRING, false, true},
+        {"umask", "Umask", NEW_PARSE_INT, &(int){0}, (void**)&task->parser.umask, NEW_PARAM_INT, false, false},
+    };
+
+    for (size_t i = 0; i < sizeof(configs) / sizeof(configs[0]); i++)
+    {
+        if (strcasecmp(param, configs[i].param_name) == 0)
+        {
+            void* temp_value = NULL;
+            if (conf_parse_format(configs[i].prompt, configs[i].parse_type, configs[i].default_value,
+                &temp_value, configs[i].param_type, configs[i].required) == -1)
+            {
+                fprintf(stderr, "Error: Failed to parse parameter '%s'.\n", param);
+                return -1;
+            }
+
+            modify_task_param(configs[i].task_member, &temp_value, configs[i].param_type, configs[i].free);
+
+            return 0;
+        }
+    }
+
+    fprintf(stdout, "Unknown parameter: %s\n", param);
+    return -1;
+}
+
+
 void cmd_modify_task(void* param)
 {
-    if (param == NULL)
+    if (!param)
     {
         fprintf(stdout, "Usage: modify <task_name>\n");
         return;
     }
+
     const char* task_name = (const char*)param;
     task_t* task = get_task_from_name(task_name);
-    if (task)
+    if (!task)
     {
-        fprintf(stdout, "Modify of task %s requested.\n", task_name);
-        // if (modify_task() == 0)
-        // {
-        //     printf("Task modified.\n");
-        // }
-        // else
-        // {
-        //     printf("Failed to modify task.\n");
-        // }
+        fprintf(stdout, "Task '%s' not found.\n", task_name);
+        return;
     }
-    else
+
+    fprintf(stdout, "Modifying task: %s\n", task_name);
+    fprintf(stdout, "Enter parameters to modify (space-separated, e.g., 'name cmd'):\n");
+
+    char* line = NULL;
+    size_t len = 0;
+
+    if (getline(&line, &len, stdin) == -1)
     {
-        fprintf(stdout, "Requested task not found\n");
+        fprintf(stdout, "Error reading input. Modification cancelled.\n");
+        free(line);
+        return;
     }
+
+    line[strcspn(line, "\n")] = '\0';
+
+    if (line[0] == '\0')
+    {
+        fprintf(stdout, "No parameters provided. Modification cancelled.\n");
+        free(line);
+        return;
+    }
+
+    char* token = strtok(line, " ");
+    while (token)
+    {
+        if (modify_task(task, token) == -1)
+        {
+            fprintf(stdout, "Error modifying parameter: %s\n", token);
+        }
+        token = strtok(NULL, " ");
+    }
+
+    fprintf(stdout, "Task modification completed.\n");
+    free(line);
 }
+

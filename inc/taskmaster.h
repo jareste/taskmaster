@@ -42,6 +42,22 @@ typedef enum
     NEVER
 } AR_modes;
 
+typedef enum {
+    NEW_PARSE_STRING,
+    NEW_PARSE_INT,
+    NEW_PARSE_BOOL,
+    NEW_PARSE_ARRAY,
+    NEW_PARSE_AR
+} task_format;
+
+typedef enum {
+    NEW_PARAM_STRING,
+    NEW_PARAM_INT,
+    NEW_PARAM_BOOL,
+    NEW_PARAM_ARRAY,
+    NEW_PARAM_AR
+} task_param;
+
 typedef struct
 {
     list_item_t l;
@@ -112,5 +128,7 @@ char** parse_array(char* str);
 char* get_autorestart_str(AR_modes ar);
 
 AR_modes parse_autorestart(char* str);
+
+void modify_task_param(void* param, void* new_value, task_param type, bool should_free);
 
 #endif /* TASKMASTER_H */

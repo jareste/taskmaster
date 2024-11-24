@@ -205,6 +205,53 @@ void push_log(task_t* task, const char* format, ...)
     FT_LIST_ADD_LAST(&task->intern.logs, log);
 }
 
+void modify_task_param(void* param, void* new_value, task_param type, bool should_free)
+{
+    pthread_mutex_lock(&g_mutex);
+    if (should_free)
+    {
+        switch (type)
+        {
+        case NEW_PARAM_STRING:
+            free(*(char**)param);
+            break;
+        case NEW_PARAM_ARRAY:
+            /* TODO */
+            break;
+        case NEW_PARAM_INT:
+            // No need to free int
+            break;
+        case NEW_PARAM_BOOL:
+            // No need to free bool
+            break;
+        case NEW_PARAM_AR:
+            // No need to free AR_modes
+            break;
+        }
+    }
+
+    switch (type)
+    {
+    case NEW_PARAM_STRING:
+        *(char**)param = *(char**)new_value;
+        break;
+    case NEW_PARAM_INT:
+        *(int*)param = *(int*)new_value;
+        break;
+    case NEW_PARAM_BOOL:
+        *(bool*)param = *(bool*)new_value;
+        break;
+    case NEW_PARAM_ARRAY:
+        *(char**)param = *(char**)new_value; /* TODO */
+        break;
+    case NEW_PARAM_AR:
+        *(AR_modes*)param = *(AR_modes*)new_value;
+        break;
+    }
+
+    pthread_mutex_unlock(&g_mutex);
+}
+
 void print_logs(task_t* task)
 {
     log_t* log = NULL;
@@ -307,7 +354,6 @@ void free_task(task_t* task)
         free(task->parser.exitcodes);
         task->parser.exitcodes = NULL;
     }
-    printf("freeing task %p\n", task);
     free(task);
 }
 
@@ -322,7 +368,6 @@ void delete_task(task_t** task)
     delete_logs((*task));
     FT_LIST_POP(&tasks, *task);
     set_active_tasks(tasks);
-    printf("new head: %p\n", *task);
     free_task(*task);
     *task = get_active_tasks();
     // *task = FT_LIST_GET_NEXT(&tasks, *task);
@@ -443,7 +488,6 @@ int supervisor(task_t* tasks)
 
         if (cmd_requested_action_on_task(&task) != 0)
         {
-            printf("new head foo: %p, cmd_state: %d.\n", task, task->intern.cmd_request);
             task = get_active_tasks();
             continue;
         }
