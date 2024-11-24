@@ -167,12 +167,13 @@ void update_task_cmd_state(task_t* task, cmd_request cmd)
 {
     /* put mutex here */
     pthread_mutex_lock(&g_mutex);
-    if (task->intern.cmd_request != CMD_NONE)
+    if (task->intern.cmd_request != CMD_NONE && cmd != CMD_NONE)
     {
         /* we are not ready to accept new command */
         pthread_mutex_unlock(&g_mutex);
         return;
     }
+    printf("Updating task %s with cmd %d\n", task->parser.name, cmd);
     task->intern.cmd_request = cmd;
     pthread_mutex_unlock(&g_mutex);
 }
@@ -250,6 +251,64 @@ int stop_task(const char* task_name)
     return -1;
 }
 
+void free_task(task_t* task)
+{
+    if (task == NULL)
+    {
+        return;
+    }
+    if (task->parser.name)
+    {
+        free(task->parser.name);
+        task->parser.name = NULL;
+    }
+    if (task->parser.cmd)
+    {
+        free(task->parser.cmd);
+        task->parser.cmd = NULL;
+    }
+    if (task->parser.args)
+    {
+        for (size_t i = 0; task->parser.args[i] != NULL; i++)
+        {
+            free(task->parser.args[i]);
+        }
+        free(task->parser.args);
+        task->parser.args = NULL;
+    }
+    if (task->parser.dir)
+    {
+        free(task->parser.dir);
+        task->parser.dir = NULL;
+    }
+    if (task->parser.env)
+    {
+        for (size_t i = 0; task->parser.env[i] != NULL; i++)
+        {
+            free(task->parser.env[i]);
+        }
+        free(task->parser.env);
+        task->parser.env = NULL;
+    }
+    if (task->parser.stdout)
+    {
+        free(task->parser.stdout);
+        task->parser.stdout = NULL;
+    }
+    if (task->parser.stderr)
+    {
+        free(task->parser.stderr);
+        task->parser.stderr = NULL;
+    }
+    if (task->parser.exitcodes)
+    {
+        free(task->parser.exitcodes);
+        task->parser.exitcodes = NULL;
+    }
+    printf("freeing task %p\n", task);
+    free(task);
+}
+
 void delete_task(task_t** task)
 {
     task_t* tasks = get_active_tasks();
@@ -261,9 +320,10 @@ void delete_task(task_t** task)
     delete_logs((*task));
     FT_LIST_POP(&tasks, *task);
     set_active_tasks(tasks);
-    *task = FT_LIST_GET_NEXT(&tasks, *task);
-    /* not now */
-    // free(task);
+    printf("new head: %p\n", *task);
+    free_task(*task);
+    *task = get_active_tasks();
+    // *task = FT_LIST_GET_NEXT(&tasks, *task);
 
     return;
 }
@@ -273,6 +333,10 @@ void check_if_start(task_t* task)
     /*
         Autostart only start when stopped, otherwise don't do anything
     */
+    if (task == NULL)
+    {
+        return;
+    }
     if (task->parser.autostart == true && task->intern.state == STOPPED)
     {
         if (start_task(task) == -1)
@@ -300,7 +364,8 @@ static void cleanup(task_t* tasks, bool kill_all)
             kill(task->intern.pid, task->parser.stopsignal);
         }
         delete_logs(task);
-        task = FT_LIST_GET_NEXT(&tasks, task);
+        delete_task(&task);
+        task = get_active_tasks();
     }
 }
 
@@ -313,9 +378,11 @@ void update_task_state(task_t* task, task_state state)
 int cmd_requested_action_on_task(task_t** task)
 {
     int ret = 0;
+    // printf("head foo: %p, cmd_state: %d.\n", *task, (*task)->intern.cmd_request);
     switch ((*task)->intern.cmd_request)
     {
         case CMD_START:
+            printf("Starting task %s\n", (*task)->parser.name);
             start_task(*task);
             ret = 1;
             break;
@@ -338,7 +405,7 @@ int cmd_requested_action_on_task(task_t** task)
             return 0;
     }
 
-    if (ret != 2)
+    if (ret != 2 && ret != 0)
         update_task_cmd_state((*task), CMD_NONE);
 
     return ret;
@@ -350,25 +417,23 @@ int supervisor(task_t* tasks)
     task_t* task = NULL;
     int pid = 0;
     int status = 0;
-    int loop = 0;
 
-    task = tasks;
+    task = get_active_tasks();
     while (die == false)
     {
-        if (task == NULL)
+        while (task == NULL)
         {
-            loop++;
-            task = tasks;
-            // if (loop == 3)    
-            //     break;
+            task = get_active_tasks();
+            if (die == true)
+                goto end;
             usleep(200000);
         }
         check_if_start(task);
 
         if (cmd_requested_action_on_task(&task) != 0)
         {
-            tasks = get_active_tasks();
-            task = tasks;
+            printf("new head foo: %p, cmd_state: %d.\n", task, task->intern.cmd_request);
+            task = get_active_tasks();
             continue;
         }
 
@@ -429,9 +494,13 @@ int supervisor(task_t* tasks)
 
         update_next_steps(task);
 
+        tasks = get_active_tasks();
         task = FT_LIST_GET_NEXT(&tasks, task);
     }
 
+end:
+    printf("Exiting supervisor\n");
+    tasks = get_active_tasks();
     cleanup(tasks, true);
 
     return 0;

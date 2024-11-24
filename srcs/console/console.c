@@ -338,7 +338,7 @@ void cmd_kill_supervisor(void* param)
 void cmd_new(void* param)
 {
     (void)param;
-    task_t* task = NEW(task_t);
+    task_t* task = NEW(task_t, 1);
     (void)task;
     // if (create_new_task() == 0)
     // {

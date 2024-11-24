@@ -1,10 +1,11 @@
 #include <stdio.h>
-#include <taskmaster.h>
 #include <signal.h>
 #include <stdlib.h>
 #include <string.h>
-
 #include <unistd.h>
+
+#include <taskmaster.h>
+#include <ft_malloc.h>
 
 static pthread_t console_thread;
 static task_t* m_active_tasks = NULL;
@@ -37,102 +38,127 @@ int main()
 {
     signal(SIGINT, handle_sigint);
 
-    int exitcodes1[] = {4, 0,2,3};
-    int exitcodes2[] = {3, 1,2};
-    int exitcodes3[] = {3, 127,3};
+    int *exitcodes1 = NEW(int, 4);
+    int *exitcodes2 = NEW(int, 3);
+    int *exitcodes3 = NEW(int, 3);
+    int *exitcodes4 = NEW(int, 4);
 
-    char *args[] = {"/bin/ls", "-l", "-a", NULL};
-    char *env[] = {"HOME=/", "LOGNAME=home", "PATH=/usr/bin", NULL};
-    char *args2[] = {"/bin/echo", "'Hello, World!'", NULL};
-    char *env2[] = {"HOME=/home/user", "LOGNAME=user", "PATH=/usr/bin", NULL};
-    char *args3[] = {"ping", "-c 4 google.es", NULL};
-    char *env3[] = {"HOME=/usr/bin", "LOGNAME=bin", "PATH=/usr/bin", NULL};
-    char *argv[] = {"/bin/sh", "-c", "while :; do sleep 1; done", NULL};
-    char *envp[] = {"HOME=/usr/bin", "LOGNAME=bin", "PATH=/usr/bin", NULL};
+    exitcodes1[0] = 4; exitcodes1[1] = 0; exitcodes1[2] = 2; exitcodes1[3] = 3;
+    exitcodes2[0] = 3; exitcodes2[1] = 1; exitcodes2[2] = 2;
+    exitcodes3[0] = 3; exitcodes3[1] = 127; exitcodes3[2] = 3;
+    exitcodes4[0] = 4; exitcodes4[1] = 0; exitcodes4[2] = 2; exitcodes4[3] = 3;
 
-    task_t m_tasks1 = {
-            .parser.name = "task1",
-            .parser.cmd = "/bin/ls",
-            .parser.args = args,
-            .parser.dir = "/",
-            .parser.env = env,
-            .parser.autostart = true,
-            .parser.ar = ALWAYS,
-            .parser.startretries = 3,
-            .parser.starttime = 1,
-            .parser.stoptime = 1,
-            .parser.exitcodes = exitcodes1,
-            .parser.stopsignal = 15,
-            .parser.stoptimeout = 1,
-            .parser.stdout = "/workspaces/taskmaster/outputs/task1",
-            .parser.stderr = "/workspaces/taskmaster/outputs/task1_error",
-            .intern.state = STOPPED
-    };
-    task_t m_tasks2 = {
-            .parser.name = "task2",
-            .parser.cmd = "echo ",
-            .parser.args = args2,
-            .parser.dir = "/home/user",
-            .parser.env = env2,
-            .parser.autostart = false,
-            .parser.ar = SUCCESS,
-            .parser.startretries = 5,
-            .parser.starttime = 2,
-            .parser.stoptime = 2,
-            .parser.exitcodes = exitcodes2,
-            .parser.stopsignal = 15,
-            .parser.stoptimeout = 2,
-            .parser.stdout = "/dev/null",
-            .parser.stderr = "/workspaces/taskmaster/outputs/task2_error",
-            .intern.state = STOPPED
-    };
-    task_t m_tasks3 = {
-            .parser.name = "task3",
-            .parser.cmd = "ping",
-            .parser.args = args3,
-            .parser.dir = "/usr/bin",
-            .parser.env = env3,
-            .parser.autostart = true,
-            .parser.ar = FAILURE,
-            .parser.startretries = 2,
-            .parser.starttime = 3,
-            .parser.stoptime = 3,
-            .parser.exitcodes = exitcodes3,
-            .parser.stopsignal = 15,
-            .parser.stoptimeout = 3,
-            .parser.stdout = "/dev/null",
-            .parser.stderr = "/workspaces/taskmaster/outputs/task3_error",
-            .intern.state = STOPPED
-    };
-    task_t m_tasks4 = {
-        .parser.name = "task4",
-        .parser.cmd = "/bin/sh",
-        .parser.args = argv,
-        .parser.dir = "/",
-        .parser.env = envp,
-        .parser.autostart = true,
-        .parser.ar = ALWAYS,
-        .parser.startretries = 3,
-        .parser.starttime = 1,
-        .parser.stoptime = 1,
-        .parser.exitcodes = exitcodes1,
-        .parser.stopsignal = 15,
-        .parser.stoptimeout = 1,
-        .parser.stdout = "/dev/null",
-        .parser.stderr = "/dev/null",
-        .intern.state = STOPPED
-    };
+    char **args = NEW(char*, 4);
+    args[0] = strdup("/bin/ls"); args[1] = strdup("-l"); args[2] = strdup("-a"); args[3] = NULL;
+
+    char **env = NEW(char*, 4);
+    env[0] = strdup("HOME=/"); env[1] = strdup("LOGNAME=home"); env[2] = strdup("PATH=/usr/bin"); env[3] = NULL;
+
+    char **args2 = NEW(char*, 4);
+    args2[0] = strdup("/bin/echo"); args2[1] = strdup("'Hello, World!'"); args2[2] = NULL;
+
+    char **env2 = NEW(char*, 44);
+    env2[0] = strdup("HOME=/home/user"); env2[1] = strdup("LOGNAME=user"); env2[2] = strdup("PATH=/usr/bin"); env2[3] = NULL;
+
+    char **args3 = NEW(char*, 4);
+    args3[0] = strdup("ping"); args3[1] = strdup("-c 4 google.es"); args3[2] = NULL;
+
+    char **env3 = NEW(char*, 4);
+    env3[0] = strdup("HOME=/usr/bin"); env3[1] = strdup("LOGNAME=bin"); env3[2] = strdup("PATH=/usr/bin"); env3[3] = NULL;
+
+    char **argv = NEW(char*, 4);
+    argv[0] = strdup("/bin/sh"); argv[1] = strdup("-c"); argv[2] = strdup("while :; do sleep 1; done"); argv[3] = NULL;
+
+    char **envp = NEW(char*, 4);
+    envp[0] = strdup("HOME=/usr/bin"); envp[1] = strdup("LOGNAME=bin"); envp[2] = strdup("PATH=/usr/bin"); envp[3] = NULL;
+
+    task_t *m_tasks1 = NEW(task_t, 1);
+    m_tasks1->parser.name = strdup("task1");
+    m_tasks1->parser.cmd = strdup("/bin/ls");
+    m_tasks1->parser.args = args;
+    m_tasks1->parser.dir = strdup("/");
+    m_tasks1->parser.env = env;
+    m_tasks1->parser.autostart = true;
+    m_tasks1->parser.ar = ALWAYS;
+    m_tasks1->parser.startretries = 3;
+    m_tasks1->parser.starttime = 1;
+    m_tasks1->parser.stoptime = 1;
+    m_tasks1->parser.exitcodes = exitcodes1;
+    m_tasks1->parser.stopsignal = 15;
+    m_tasks1->parser.stoptimeout = 1;
+    m_tasks1->parser.stdout = strdup("/workspaces/taskmaster/outputs/task1");
+    m_tasks1->parser.stderr = strdup("/workspaces/taskmaster/outputs/task1_error");
+    m_tasks1->intern.state = STOPPED;
+
+    task_t *m_tasks2 = NEW(task_t, 1);
+    m_tasks2->parser.name = strdup("task2");
+    m_tasks2->parser.cmd = strdup("echo ");
+    m_tasks2->parser.args = args2;
+    m_tasks2->parser.dir = strdup("/home/user");
+    m_tasks2->parser.env = env2;
+    m_tasks2->parser.autostart = false;
+    m_tasks2->parser.ar = SUCCESS;
+    m_tasks2->parser.startretries = 5;
+    m_tasks2->parser.starttime = 2;
+    m_tasks2->parser.stoptime = 2;
+    m_tasks2->parser.exitcodes = exitcodes2;
+    m_tasks2->parser.stopsignal = 15;
+    m_tasks2->parser.stoptimeout = 2;
+    m_tasks2->parser.stdout = strdup("/dev/null");
+    m_tasks2->parser.stderr = strdup("/workspaces/taskmaster/outputs/task2_error");
+    m_tasks2->intern.state = STOPPED;
+
+    task_t *m_tasks3 = NEW(task_t, 1);
+    m_tasks3->parser.name = strdup("task3");
+    m_tasks3->parser.cmd = strdup("ping");
+    m_tasks3->parser.args = args3;
+    m_tasks3->parser.dir = strdup("/usr/bin");
+    m_tasks3->parser.env = env3;
+    m_tasks3->parser.autostart = true;
+    m_tasks3->parser.ar = FAILURE;
+    m_tasks3->parser.startretries = 2;
+    m_tasks3->parser.starttime = 3;
+    m_tasks3->parser.stoptime = 3;
+    m_tasks3->parser.exitcodes = exitcodes3;
+    m_tasks3->parser.stopsignal = 15;
+    m_tasks3->parser.stoptimeout = 3;
+    m_tasks3->parser.stdout = strdup("/dev/null");
+    m_tasks3->parser.stderr = strdup("/workspaces/taskmaster/outputs/task3_error");
+    m_tasks3->intern.state = STOPPED;
+
+    task_t *m_tasks4 = NEW(task_t, 1);
+    m_tasks4->parser.name = strdup("task4");
+    m_tasks4->parser.cmd = strdup("/bin/sh");
+    m_tasks4->parser.args = argv;
+    m_tasks4->parser.dir = strdup("/");
+    m_tasks4->parser.env = envp;
+    m_tasks4->parser.autostart = true;
+    m_tasks4->parser.ar = ALWAYS;
+    m_tasks4->parser.startretries = 3;
+    m_tasks4->parser.starttime = 1;
+    m_tasks4->parser.stoptime = 1;
+    m_tasks4->parser.exitcodes = exitcodes4;
+    m_tasks4->parser.stopsignal = 15;
+    m_tasks4->parser.stoptimeout = 1;
+    m_tasks4->parser.stdout = strdup("/dev/null");
+    m_tasks4->parser.stderr = strdup("/dev/null");
+    m_tasks4->intern.state = STOPPED;
 
     task_t* tasks = NULL;
     /*parser*/
 
-    FT_LIST_ADD_LAST(&tasks, &m_tasks1);
-    FT_LIST_ADD_LAST(&tasks, &m_tasks2);
-    FT_LIST_ADD_LAST(&tasks, &m_tasks3);
-    FT_LIST_ADD_LAST(&tasks, &m_tasks4);
+    FT_LIST_ADD_LAST(&tasks, m_tasks1);
+    FT_LIST_ADD_LAST(&tasks, m_tasks2);
+    FT_LIST_ADD_LAST(&tasks, m_tasks3);
+    FT_LIST_ADD_LAST(&tasks, m_tasks4);
 
     m_active_tasks = tasks;
 
+
+    // printf("task1: %p\n", m_tasks1);
+    // printf("task2: %p\n", m_tasks2);
+    // printf("task3: %p\n", m_tasks3);
+    // printf("task4: %p\n", m_tasks4);
     if (pipe(pipefd) == -1) { perror("pipe"); return 1; }
 
     /* maybe the one launched on task must be supervisor?
@@ -145,5 +171,25 @@ int main()
     pthread_join(console_thread, NULL);
 
     printf("Hello world\n");
+
+
+    // Don't forget to free the allocated memory when done
+    // free(m_tasks1);
+    // free(m_tasks2);
+    // free(m_tasks3);
+    // free(m_tasks4);
+    // free(exitcodes1);
+    // free(exitcodes2);
+    // free(exitcodes3);
+    // free(args);
+    // free(env);
+    // free(args2);
+    // free(env2);
+    // free(args3);
+    // free(env3);
+    // free(argv);
+    // free(envp);
+
+
     return 0;
 }

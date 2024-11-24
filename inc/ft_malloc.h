@@ -17,9 +17,9 @@
         }
 #endif
 
-#define NEW(type) ({ \
-    type* ptr_new = (type*)ft_malloc(sizeof(type)); \
-    memset(ptr_new, 0, sizeof(type)); \
+#define NEW(type, count) ({ \
+    type* ptr_new = (type*)ft_malloc(sizeof(type) * (count)); \
+    memset(ptr_new, 0, sizeof(type) * (count)); \
     ptr_new; \
 })
 
