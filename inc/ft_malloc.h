@@ -17,6 +17,12 @@
         }
 #endif
 
+#define NEW(type) ({ \
+    type* ptr_new = (type*)ft_malloc(sizeof(type)); \
+    memset(ptr_new, 0, sizeof(type)); \
+    ptr_new; \
+})
+
 #define malloc(x) ft_malloc(x)
 #define realloc(x, y) ft_realloc(x, y)
 #define strdup(x) ft_strdup(x)
