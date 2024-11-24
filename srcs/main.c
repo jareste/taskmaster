@@ -86,8 +86,8 @@ int main()
     m_tasks1->parser.exitcodes = exitcodes1;
     m_tasks1->parser.stopsignal = 15;
     m_tasks1->parser.stoptimeout = 1;
-    m_tasks1->parser.stdout = strdup("/workspaces/taskmaster/outputs/task1");
-    m_tasks1->parser.stderr = strdup("/workspaces/taskmaster/outputs/task1_error");
+    m_tasks1->parser.stdout = strdup("outputs/task1");
+    m_tasks1->parser.stderr = strdup("outputs/task1_error");
     m_tasks1->intern.state = STOPPED;
 
     task_t *m_tasks2 = NEW(task_t, 1);
@@ -105,7 +105,7 @@ int main()
     m_tasks2->parser.stopsignal = 15;
     m_tasks2->parser.stoptimeout = 2;
     m_tasks2->parser.stdout = strdup("/dev/null");
-    m_tasks2->parser.stderr = strdup("/workspaces/taskmaster/outputs/task2_error");
+    m_tasks2->parser.stderr = strdup("outputs/task2_error");
     m_tasks2->intern.state = STOPPED;
 
     task_t *m_tasks3 = NEW(task_t, 1);
@@ -123,7 +123,7 @@ int main()
     m_tasks3->parser.stopsignal = 15;
     m_tasks3->parser.stoptimeout = 3;
     m_tasks3->parser.stdout = strdup("/dev/null");
-    m_tasks3->parser.stderr = strdup("/workspaces/taskmaster/outputs/task3_error");
+    m_tasks3->parser.stderr = strdup("outputs/task3_error");
     m_tasks3->intern.state = STOPPED;
 
     task_t *m_tasks4 = NEW(task_t, 1);
@@ -138,7 +138,7 @@ int main()
     m_tasks4->parser.starttime = 1;
     m_tasks4->parser.stoptime = 1;
     m_tasks4->parser.exitcodes = exitcodes4;
-    m_tasks4->parser.stopsignal = 15;
+    m_tasks4->parser.stopsignal = 14;
     m_tasks4->parser.stoptimeout = 1;
     m_tasks4->parser.stdout = strdup("/dev/null");
     m_tasks4->parser.stderr = strdup("/dev/null");

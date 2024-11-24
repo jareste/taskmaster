@@ -44,6 +44,19 @@ int start_task(task_t* task)
     {
         close(pipefd[0]);
 
+        if (task->parser.dir != NULL)
+        {
+            if (chdir(task->parser.dir) == -1)
+            {
+                snprintf(buffer, sizeof(buffer), "Failed to change directory to %s: %s", 
+                         task->parser.dir, strerror(errno));
+                write(pipefd[1], buffer, strlen(buffer));
+                close(pipefd[1]);
+                cleanup(get_active_tasks(), false);
+                exit(EXIT_FAILURE);
+            }
+        }
+
         if (task->parser.stdout != NULL)
         {
             int fd_out = open(task->parser.stdout, O_CREAT | O_WRONLY | O_APPEND, 0644);
@@ -105,7 +118,6 @@ int start_task(task_t* task)
     }
     else if (pid < 0)
     {
-        // Fork failed
         update_task_state(task, FATAL);
         close(pipefd[0]);
         close(pipefd[1]);
@@ -113,7 +125,6 @@ int start_task(task_t* task)
     }
     else
     {
-        // Parent process
         close(pipefd[1]);
 
         fd_set readfds;
@@ -175,7 +186,6 @@ void update_task_cmd_state(task_t* task, cmd_request cmd)
         pthread_mutex_unlock(&g_mutex);
         return;
     }
-    printf("Updating task %s with cmd %d\n", task->parser.name, cmd);
     task->intern.cmd_request = cmd;
     pthread_mutex_unlock(&g_mutex);
 }
@@ -290,6 +300,7 @@ int stop_task(const char* task_name)
             {
                 if (task->intern.state == RUNNING)
                 {
+                    printf("Stopping task %s\n", task->parser.name);
                     kill(task->intern.pid, task->parser.stopsignal);
                 }
                 return 0;
@@ -357,11 +368,11 @@ void free_task(task_t* task)
     free(task);
 }
 
-void delete_task(task_t** task)
+void delete_task(task_t** task, bool kill_all)
 {
     task_t* tasks = get_active_tasks();
     
-    if ((*task)->intern.state == RUNNING)
+    if ((*task)->intern.state == RUNNING && kill_all == true)
     {
         kill((*task)->intern.pid, SIGTERM);
     }
@@ -370,7 +381,6 @@ void delete_task(task_t** task)
     set_active_tasks(tasks);
     free_task(*task);
     *task = get_active_tasks();
-    // *task = FT_LIST_GET_NEXT(&tasks, *task);
 
     return;
 }
@@ -417,10 +427,11 @@ static void cleanup(task_t* tasks, bool kill_all)
     {
         if (task->intern.state == RUNNING && kill_all == true)
         {
+            printf("Stopping task2222 %s\n", task->parser.name);
             kill(task->intern.pid, task->parser.stopsignal);
         }
         delete_logs(task);
-        delete_task(&task);
+        delete_task(&task, kill_all);
         task = get_active_tasks();
     }
 }
@@ -434,11 +445,9 @@ void update_task_state(task_t* task, task_state state)
 int cmd_requested_action_on_task(task_t** task)
 {
     int ret = 0;
-    // printf("head foo: %p, cmd_state: %d.\n", *task, (*task)->intern.cmd_request);
     switch ((*task)->intern.cmd_request)
     {
         case CMD_START:
-            printf("Starting task %s\n", (*task)->parser.name);
             start_task(*task);
             ret = 1;
             break;
@@ -454,7 +463,7 @@ int cmd_requested_action_on_task(task_t** task)
             break;
         case CMD_DELETE:
             /* remove it from the list */
-            delete_task(task);
+            delete_task(task, true);
             ret = 2;
             break;
         case CMD_NONE:

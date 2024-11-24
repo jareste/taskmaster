@@ -516,6 +516,7 @@ void print_task(task_t* task)
     else
         for (size_t i = 0; task->parser.env[i]; ++i)
             fprintf(stdout, "\t%s\n", task->parser.env[i]);
+
     fprintf(stdout, "%-*s %s\n", field_width, "Autostart:", task->parser.autostart ? "true" : "false");
     fprintf(stdout, "%-*s %s\n", field_width, "Autorestart:", get_autorestart_str(task->parser.ar));
     fprintf(stdout, "%-*s %d\n", field_width, "Startretries:", task->parser.startretries);
@@ -529,6 +530,7 @@ void print_task(task_t* task)
     else
         for (int i = 0; i < task->parser.exitcodes[0]; ++i)
             fprintf(stdout, "\t%d\n", task->parser.exitcodes[i]);
+
     fprintf(stdout, "%-*s %d\n", field_width, "Stopsignal:", task->parser.stopsignal);
     fprintf(stdout, "%-*s %d\n", field_width, "Stoptimeout:", task->parser.stoptimeout);
     fprintf(stdout, "%-*s %s\n", field_width, "Stdout:", task->parser.stdout);
@@ -584,8 +586,7 @@ static int modify_task(task_t* task, const char* param)
         bool free;
     } ParamConfig;
 
-    ParamConfig configs[] =
-    {
+    ParamConfig configs[] = {
         {"name", "Task name*", NEW_PARSE_STRING, NULL, (void**)&task->parser.name, NEW_PARAM_STRING, true, true},
         {"cmd", "Command*", NEW_PARSE_STRING, NULL, (void**)&task->parser.cmd, NEW_PARAM_STRING, true, true},
         {"args", "Args format: arg1 arg2 arg3 ... argN", NEW_PARSE_ARRAY, NULL, (void**)&task->parser.args, NEW_PARAM_ARRAY, false, true},
