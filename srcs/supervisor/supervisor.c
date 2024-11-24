@@ -53,6 +53,7 @@ int start_task(task_t* task)
                          task->parser.stdout, strerror(errno));
                 write(pipefd[1], buffer, strlen(buffer));
                 close(pipefd[1]);
+                cleanup(get_active_tasks(), false);
                 exit(EXIT_FAILURE);
             }
             dup2(fd_out, STDOUT_FILENO);
@@ -77,6 +78,7 @@ int start_task(task_t* task)
                          task->parser.stderr, strerror(errno));
                 write(pipefd[1], buffer, strlen(buffer));
                 close(pipefd[1]);
+                cleanup(get_active_tasks(), false);
                 exit(EXIT_FAILURE);
             }
             dup2(fd_err, STDERR_FILENO);
