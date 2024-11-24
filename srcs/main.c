@@ -9,6 +9,7 @@
 static pthread_t console_thread;
 static task_t* m_active_tasks = NULL;
 int pipefd[2];
+bool exit_flag = false;
 
 task_t* get_active_tasks()
 {
@@ -29,6 +30,7 @@ void handle_sigint(int sig)
     printf("\nCaught signal %d (SIGINT). Exiting...\n", sig);
     /* wake up console exit condition. */
     write(pipefd[1], "exit", 4);
+    exit_flag = true;
 }
 
 int main()

@@ -93,7 +93,7 @@ typedef struct
 
 #define MAX_LOGS 10
 
-// extern pthread_mutex_t g_mutex_list;
+extern bool exit_flag;
 
 void print_logs(task_t* task);
 int supervisor(task_t* tasks);

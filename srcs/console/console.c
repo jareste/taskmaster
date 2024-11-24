@@ -1,9 +1,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <taskmaster.h>
 #include <signal.h>
 #include <unistd.h>
+
+#include <taskmaster.h>
+#include <ft_malloc.h>
 
 void cmd_help(void* param);
 void cmd_active(void* param);
@@ -90,7 +92,7 @@ void* interactive_console(void* param)
     fprintf(stdout, "Interactive Console. Type 'help' for a list of commands.\n");
     fflush(stdout);
 
-    while (1)
+    while (exit_flag == false)
     {
         fprintf(stdout, "-> ");
         fflush(stdout);
@@ -336,6 +338,8 @@ void cmd_kill_supervisor(void* param)
 void cmd_new(void* param)
 {
     (void)param;
+    task_t* task = NEW(task_t);
+    (void)task;
     // if (create_new_task() == 0)
     // {
     //     printf("New task created.\n");
