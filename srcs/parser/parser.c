@@ -114,10 +114,11 @@
 //     return (str);
 // }
 
-// char** parse_array(char* str)
-// {
-//     return NULL;
-// }
+char** parse_array(char* str)
+{
+    (void)str;
+    return NULL;
+}
 
 
 
@@ -171,5 +172,5 @@ AR_modes parse_autorestart(char* str)
     else if (strcasecmp(str, "never") == 0)
         return (NEVER);
     /* failure!!! */
-    return -1;
+    return (NEVER);
 }

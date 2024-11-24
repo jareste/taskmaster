@@ -355,6 +355,15 @@ void kill_me()
     die = true;
 }
 
+void add_task_to_list(task_t* task)
+{
+    pthread_mutex_lock(&g_mutex);
+    task_t* tasks = get_active_tasks();
+    FT_LIST_ADD_LAST(&tasks, task);
+    set_active_tasks(tasks);
+    pthread_mutex_unlock(&g_mutex);
+}
+
 /* unsafe to call from outside supervisor. */
 static void cleanup(task_t* tasks, bool kill_all)
 {

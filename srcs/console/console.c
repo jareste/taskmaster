@@ -21,6 +21,28 @@ void cmd_delete(void* param);
 void cmd_show_task(void* task);
 void cmd_modify_task(void* param); /* TODO */
 
+typedef enum {
+    NEW_SUCCESS,
+    NEW_FAILURE,
+    NEW_EMPTY
+} new_task_return;
+
+typedef enum {
+    NEW_PARSE_STRING,
+    NEW_PARSE_INT,
+    NEW_PARSE_BOOL,
+    NEW_PARSE_ARRAY,
+    NEW_PARSE_AR
+} new_task_format;
+
+typedef enum {
+    NEW_PARAM_STRING,
+    NEW_PARAM_INT,
+    NEW_PARAM_BOOL,
+    NEW_PARAM_ARRAY,
+    NEW_PARAM_AR
+} new_task_param;
+
 typedef struct {
     const char* name;
     void (*func)(void* param);
@@ -332,6 +354,104 @@ void cmd_kill_supervisor(void* param)
     kill_me();
 }
 
+/*
+ * Format:
+ * 1. string
+ * 2. int
+ * 3. bool
+ * 4. array
+ */
+new_task_return parse_line(new_task_format format, void* param)
+{
+    char* line = NULL;
+    size_t len = 0;
+    ssize_t read;
+    
+    read = getline(&line, &len, stdin);
+    if (read == -1)
+    {
+        fprintf(stdout, "Failed to read line.\n");
+        return NEW_FAILURE;
+    }
+
+    if (line[read - 1] == '\n')
+    {
+        line[read - 1] = '\0';
+    }
+
+    if (line[0] == '\0')
+    {
+        free(line);
+        return NEW_EMPTY;
+    }
+    
+    switch (format)
+    {
+    case NEW_PARSE_STRING:
+        *(char**)param = strdup(line);
+        break;
+    case NEW_PARSE_INT:
+        *(int*)param = atoi(line);
+        break;
+    case NEW_PARSE_BOOL:
+        *(bool*)param = (strcasecmp(line, "true") == 0) ? true : false;
+        break;
+    case NEW_PARSE_ARRAY:
+        *(char**)param = strdup(line);
+        break;
+    case NEW_PARSE_AR:
+        *(AR_modes*)param = parse_autorestart(line);
+        break;
+    default:
+        fprintf(stdout, "Unknown format.\n");
+        free(line);
+        return NEW_FAILURE;
+    }
+    free(line);
+    return NEW_SUCCESS;
+}
+
+int conf_parse_format(char* string, new_task_format format, void*  default_value,\
+                        void* param, new_task_param param_type, bool mandatory)
+{
+    fprintf(stdout, "%s: ", string);
+
+    switch (parse_line(format, param))
+    {
+    case NEW_SUCCESS:
+        break;
+    case NEW_EMPTY:
+        if (mandatory == true)
+            return -1;
+        switch (param_type)
+        {
+        case NEW_PARAM_STRING:
+            if (default_value != NULL)
+                *(char**)param = strdup((char*)default_value);
+            else
+                *(char**)param = NULL;
+            break;
+        case NEW_PARAM_INT:
+            *(int*)param = *(int*)default_value;
+            break;
+        case NEW_PARAM_BOOL:
+            *(bool*)param = *(bool*)default_value;
+            break;
+        case NEW_PARAM_ARRAY:
+            *(char**)param = NULL;
+            break;
+        case NEW_PARAM_AR:
+            *(AR_modes*)param = *(AR_modes*)default_value;
+            break;
+        }
+        break;
+    case NEW_FAILURE:
+        return -1;
+    }
+
+    return 1;
+}
+
 /* this must prompt and request for whole parser
  * parameters in order to create task.
  */
@@ -339,15 +459,96 @@ void cmd_new(void* param)
 {
     (void)param;
     task_t* task = NEW(task_t, 1);
-    (void)task;
-    // if (create_new_task() == 0)
-    // {
-    //     printf("New task created.\n");
-    // }
-    // else
-    // {
-    //     printf("Failed to create new task.\n");
-    // }
+    int default_int = 0;
+
+    if (task)
+    {
+        fprintf(stdout, "Request to create task. Please fill details.");
+        fprintf(stdout, "Parameters with '*' are mandatory:\n");
+
+        if (conf_parse_format("Task name*", NEW_PARSE_STRING, NULL,\
+            &task->parser.name, NEW_PARAM_STRING, true) == -1)
+            goto failure;
+        
+        if (conf_parse_format("Command*", NEW_PARSE_STRING, NULL,\
+            &task->parser.cmd, NEW_PARAM_STRING, true) == -1)
+
+        fprintf(stdout, "Args format: arg1 arg2 arg3 ... argN\n");
+        if (conf_parse_format("Args", NEW_PARSE_ARRAY, NULL,\
+            &task->parser.args, NEW_PARAM_ARRAY, false) == -1)
+            goto failure;
+        
+        if (conf_parse_format("Directory", NEW_PARSE_STRING, NULL,\
+            &task->parser.dir, NEW_PARAM_STRING, false) == -1)
+            goto failure;
+        
+        fprintf(stdout, "Environment format: env1=value1 env2=value2 ... envN=valueN\n");
+        if (conf_parse_format("Environment", NEW_PARSE_ARRAY, NULL,\
+            &task->parser.env, NEW_PARAM_ARRAY, false) == -1)
+            goto failure;
+        
+        bool autorestart_default = false;
+        if (conf_parse_format("Autostart (true/false)", NEW_PARSE_BOOL, &autorestart_default,\
+            &task->parser.autostart, NEW_PARAM_BOOL, false) == -1)
+            goto failure;
+        
+        /*dtach comes here*/
+
+        AR_modes autorestart_mode = NEVER;
+        if (conf_parse_format("Autorestart (always/unexpected/success/failure/never)",\
+            NEW_PARSE_AR, &autorestart_mode,\
+            &task->parser.ar, NEW_PARAM_AR, false) == -1)
+            goto failure;
+
+        if (conf_parse_format("Startretries", NEW_PARSE_INT, &default_int,\
+            &task->parser.startretries, NEW_PARAM_INT, false) == -1)
+            goto failure;
+    
+    
+        if (conf_parse_format("Starttime", NEW_PARSE_INT, &default_int,\
+            &task->parser.starttime, NEW_PARAM_INT, false) == -1)
+            goto failure;
+    
+        if (conf_parse_format("Stoptime", NEW_PARSE_INT, &default_int,\
+            &task->parser.stoptime, NEW_PARAM_INT, false) == -1)
+            goto failure;
+
+        fprintf(stdout, "Exitcodes format: code1 code2 ... codeN\n");
+        if (conf_parse_format("Exitcodes", NEW_PARSE_ARRAY, NULL,\
+            &task->parser.exitcodes, NEW_PARAM_ARRAY, false) == -1)
+            goto failure;
+        
+        /* TODO parse properly the signal. */
+        int stopsig_default = 9;
+        if (conf_parse_format("Stopsignal", NEW_PARSE_INT, &stopsig_default,\
+            &task->parser.stopsignal, NEW_PARAM_INT, false) == -1)
+            goto failure;
+
+        
+        if (conf_parse_format("Stoptimeout", NEW_PARSE_INT, &default_int,\
+            &task->parser.stoptimeout, NEW_PARAM_INT, false) == -1)
+            goto failure;        
+        
+        if (conf_parse_format("Stdout", NEW_PARSE_STRING, NULL,\
+            &task->parser.stdout, NEW_PARAM_STRING, false) == -1)
+            goto failure;
+        
+        if (conf_parse_format("Stderr", NEW_PARSE_STRING, NULL,\
+            &task->parser.stderr, NEW_PARAM_STRING, false) == -1)
+            goto failure;
+
+        if (conf_parse_format("Umask", NEW_PARSE_INT, &default_int,\
+            &task->parser.umask, NEW_PARAM_INT, false) == -1)
+            goto failure;
+
+        add_task_to_list(task);
+    }
+    return;
+
+failure:
+    fprintf(stdout, "Failed to create task.\n");
+    free_task(task);
+    return;
 }
 
 void print_task(task_t* task)
@@ -355,23 +556,36 @@ void print_task(task_t* task)
     const int field_width = 15; // Adjust the width as needed
 
     fprintf(stdout, "%-*s %s\n", field_width, "Task name:", task->parser.name);
-    fprintf(stdout, "%-*s %s\n", field_width, "Command:", task->parser.cmd);
+    fprintf(stdout, "%-*s %s", field_width, "Command:", task->parser.cmd);
+    if (task->parser.args)
+    {
+        fprintf(stdout, " ");
+        for (size_t i = 0; task->parser.args[i]; ++i)
+        {
+            fprintf(stdout, "%s ", task->parser.args[i]);
+        }
+    }
+    fprintf(stdout, "\n");
     fprintf(stdout, "%-*s %s\n", field_width, "Directory:", task->parser.dir);
     fprintf(stdout, "%-*s\n", field_width, "Environment:");
-    for (size_t i = 0; task->parser.env[i]; ++i)
-    {
-        fprintf(stdout, "\t%s\n", task->parser.env[i]);
-    }
+    if (task->parser.env == NULL)
+        fprintf(stdout, "\tNULL\n");
+    else
+        for (size_t i = 0; task->parser.env[i]; ++i)
+            fprintf(stdout, "\t%s\n", task->parser.env[i]);
     fprintf(stdout, "%-*s %s\n", field_width, "Autostart:", task->parser.autostart ? "true" : "false");
     fprintf(stdout, "%-*s %s\n", field_width, "Autorestart:", get_autorestart_str(task->parser.ar));
     fprintf(stdout, "%-*s %d\n", field_width, "Startretries:", task->parser.startretries);
     fprintf(stdout, "%-*s %d\n", field_width, "Starttime:", task->parser.starttime);
     fprintf(stdout, "%-*s %d\n", field_width, "Stoptime:", task->parser.stoptime);
     fprintf(stdout, "%-*s\n", field_width, "Exitcodes:");
-    for (int i = 0; i < task->parser.exitcodes[0]; ++i)
+    if (task->parser.exitcodes == NULL)
     {
-        fprintf(stdout, "\t%d\n", task->parser.exitcodes[i]);
+        fprintf(stdout, "\tNULL\n");
     }
+    else
+        for (int i = 0; i < task->parser.exitcodes[0]; ++i)
+            fprintf(stdout, "\t%d\n", task->parser.exitcodes[i]);
     fprintf(stdout, "%-*s %d\n", field_width, "Stopsignal:", task->parser.stopsignal);
     fprintf(stdout, "%-*s %d\n", field_width, "Stoptimeout:", task->parser.stoptimeout);
     fprintf(stdout, "%-*s %s\n", field_width, "Stdout:", task->parser.stdout);

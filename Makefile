@@ -3,7 +3,7 @@ NAME = taskmaster
 #########
 RM = rm -rf
 CC = cc
-CFLAGS = -O3 -march=native -flto -funroll-loops -fomit-frame-pointer -Wall -Wextra -Werror -g
+CFLAGS = -O3 -march=native -flto -funroll-loops -fomit-frame-pointer -Wall -Wextra -Werror -g -fsanitize=address -fsanitize=undefined -fsanitize=leak -fsanitize=pointer-subtract -fsanitize=pointer-compare
 LDFLAGS = -lm -lpthread
 RELEASE_CFLAGS = $(CFLAGS) -DNDEBUG
 #########

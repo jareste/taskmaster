@@ -7,8 +7,8 @@
 
 typedef enum
 {
+    false,
     true,
-    false
 } bool;
 
 typedef enum
@@ -58,7 +58,7 @@ typedef struct
     char*       stdout; /* where to write stdout */
     char*       stderr; /* wher the stderr should be written */
     bool        append_out; /* append outputs or just create new ones? */
-    int         dtach; /* run with dtach (this overwrites stdout and stderr) */
+    bool        dtach; /* run with dtach (this overwrites stdout and stderr) */
     bool        autostart; /* autostart or wait CLI order? */
     AR_modes    ar; /* when to autorestart */
     int         startretries; /* if it fails to start how many times should we try? */
@@ -103,7 +103,14 @@ void* interactive_console(void* param);
 void kill_me();
 void update_task_cmd_state(task_t* task, cmd_request cmd);
 void cmd_kms(void* param);
+void add_task_to_list(task_t* task);
+
+void free_task(task_t* task);
+
+char** parse_array(char* str);
 
 char* get_autorestart_str(AR_modes ar);
+
+AR_modes parse_autorestart(char* str);
 
 #endif /* TASKMASTER_H */
