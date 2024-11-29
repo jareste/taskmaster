@@ -6,6 +6,7 @@
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <time.h>
 
 #include <ft_malloc.h>
 #include <taskmaster.h>
@@ -28,6 +29,8 @@ int start_task(task_t* task)
         push_log(task, "Task %s is already running", task->parser.name);
         return 0;
     }
+
+    task->intern.pid = -1;
 
     push_log(task, "Starting task %s", task->parser.name);
     update_task_state(task, STARTING);
@@ -194,6 +197,9 @@ void push_log(task_t* task, const char* format, ...)
 {
     log_t* log = NULL;
     va_list args;
+    time_t now;
+    struct tm* timeinfo;
+    char timestamp[20];
 
     log = ft_malloc(sizeof(log_t));
     if (log == NULL)
@@ -201,19 +207,51 @@ void push_log(task_t* task, const char* format, ...)
         return;
     }
 
-    if (FT_LIST_GET_SIZE(&task->intern.logs) > 10)
+    if (FT_LIST_GET_SIZE(&task->intern.logs) > 20)
     {
         log_t* old_log = FT_LIST_GET_FIRST(&task->intern.logs);
         FT_LIST_POP(&task->intern.logs, old_log);
         free(old_log);
     }
 
+    time(&now);
+    timeinfo = localtime(&now);
+
+    strftime(timestamp, sizeof(timestamp), "%Y-%m-%d %H:%M:%S", timeinfo);
+
     va_start(args, format);
-    vsnprintf(log->log, sizeof(log->log), format, args);
+    snprintf(log->log, sizeof(log->log), "[%s] ", timestamp);
+    vsnprintf(log->log + strlen(log->log), sizeof(log->log) - strlen(log->log), format, args);
     va_end(args);
 
     FT_LIST_ADD_LAST(&task->intern.logs, log);
 }
+
+void print_logs(task_t* task)
+{
+    log_t* log = NULL;
+
+    log = FT_LIST_GET_FIRST(&task->intern.logs);
+    printf("Logs from task %s:\n", task->parser.name);
+    while (log)
+    {
+        printf("%s\n", log->log);
+        log = FT_LIST_GET_NEXT(&task->intern.logs, log);
+    }
+}
+
+void delete_logs(task_t* task)
+{
+    log_t* log = NULL;
+
+    while (FT_LIST_GET_SIZE(&task->intern.logs) > 0)
+    {
+        log = FT_LIST_GET_FIRST(&task->intern.logs);
+        FT_LIST_POP(&task->intern.logs, log);
+        free(log);
+    }
+}
+
 
 void modify_task_param(void* param, void* new_value, task_param type, bool should_free)
 {
@@ -260,31 +298,6 @@ void modify_task_param(void* param, void* new_value, task_param type, bool shoul
     }
 
     pthread_mutex_unlock(&g_mutex);
-}
-
-void print_logs(task_t* task)
-{
-    log_t* log = NULL;
-
-    log = FT_LIST_GET_FIRST(&task->intern.logs);
-    printf("Logs from task %s:\n", task->parser.name);
-    while (log)
-    {
-        printf("%s\n", log->log);
-        log = FT_LIST_GET_NEXT(&task->intern.logs, log);
-    }
-}
-
-void delete_logs(task_t* task)
-{
-    log_t* log = NULL;
-
-    while (FT_LIST_GET_SIZE(&task->intern.logs) > 0)
-    {
-        log = FT_LIST_GET_FIRST(&task->intern.logs);
-        FT_LIST_POP(&task->intern.logs, log);
-        free(log);
-    }
 }
 
 int stop_task(const char* task_name)
@@ -385,6 +398,50 @@ void delete_task(task_t** task, bool kill_all)
     return;
 }
 
+/*
+ * where to check the exit codes?
+ */
+void check_if_restart(task_t* task)
+{
+    switch (task->parser.ar)
+    {
+        case ALWAYS:
+            goto start;
+            break;
+        case UNEXPECTED:
+            if (task->intern.state == SIGNALED)
+            {
+                goto start;
+            }
+            break;
+        case SUCCESS:
+            if (task->intern.state == EXITED)
+            {
+                goto start;
+            }
+            break;
+        case FAILURE:
+            if (task->intern.state == FATAL)
+            {
+                goto start;
+            }
+            break;
+        case NEVER:
+            /* should never happen */
+            break;
+    }
+
+    return;
+start:
+    if (start_task(task) == -1)
+    {
+        /* Fatal. stop all tasks and exit */
+        ft_assert(0, "A task failed on launch, something bad going on.");
+    }
+
+
+}
+
 void check_if_start(task_t* task)
 {
     /*
@@ -394,6 +451,15 @@ void check_if_start(task_t* task)
     {
         return;
     }
+
+    if (task->intern.pid != -1 && task->intern.state != STOPPED)
+    {
+        /*
+         * Task is running, do nothing.
+         */
+        return;
+    }
+
     if (task->parser.autostart == true && task->intern.state == STOPPED)
     {
         if (start_task(task) == -1)
@@ -401,7 +467,14 @@ void check_if_start(task_t* task)
             /* Fatal. stop all tasks and exit */
             ft_assert(0, "A task failed on launch, something bad going on.");
         }
+        return;
     }
+
+    /*
+     * Should we restart under certain conditions?
+     */
+    if (task->parser.ar != NEVER)
+        check_if_restart(task);
 }
 
 void kill_me()
@@ -482,6 +555,7 @@ int supervisor(task_t* tasks)
     task_t* task = NULL;
     int pid = 0;
     int status = 0;
+    int i = 0;
 
     task = get_active_tasks();
     while (die == false)
@@ -495,22 +569,18 @@ int supervisor(task_t* tasks)
         }
         check_if_start(task);
 
+        /*
+         * check if CLI requested any action on this task
+         */
         if (cmd_requested_action_on_task(&task) != 0)
         {
             task = get_active_tasks();
             continue;
         }
 
-        // if (ret != 0)
-        // {
-        //     /* something was done, let other taks enter*/
-        //     // if (ret != 2)
-        //         task = FT_LIST_GET_NEXT(&tasks, task);
-        //     // else
-        //     //     task = tasks; /* task got deleted, for safety, start again. */
-        //     continue;
-        // }
-
+        /*
+         * check task status
+         */
         pid = task->intern.pid;
         if (pid > 0)
         {
@@ -526,32 +596,71 @@ int supervisor(task_t* tasks)
             }
             else if (result == -1)
             {
-                /* we assume we'll be able to restore from this */
-                perror("waitpid");
+                /*
+                 * we assume we'll be able to restore from this as shouldnt be a fatal.
+                 */
+                fprintf(stderr, "Failed to waitpid: %s\n", strerror(errno));
 
             }
             else
             {
                 if (WIFEXITED(status))
                 {
+                    /*
+                     * Exited on normal execution.
+                     */
                     int exit_status = WEXITSTATUS(status);
-                    update_task_state(task, EXITED);
+                    for (i = task->parser.exitcodes[0]; i < task->parser.exitcodes[0]; i++)
+                    {
+                        if (task->parser.exitcodes[i] == exit_status)
+                        {
+                            update_task_state(task, EXITED);
+                            push_log(task, "Task %s exited with status %d", task->parser.name, exit_status);
+                            break;
+                        }
+                    }
+                
+                    if (i == task->parser.exitcodes[0])
+                    {
+                        update_task_state(task, FATAL);
+                        push_log(task, "Task %s exited with unrecognized status %d. Marking it as FATAL.", task->parser.name, exit_status);
+                    }
+                
                     task->intern.exit_status = exit_status;
-                    push_log(task, "Task %s exited with status %d", task->parser.name, exit_status);
                 }
                 else if (WIFSIGNALED(status))
                 {
                     int signal = WTERMSIG(status);
-                    update_task_state(task, SIGNALED);
+                    
+                    if (signal == task->parser.stopsignal)
+                    {
+                        /*
+                         * Expected signal.
+                         */
+                        update_task_state(task, SIGNALED);
+                        push_log(task, "Task %s exited with signal %d", task->parser.name, signal);
+                    }
+                    else
+                    {
+                        /*
+                         * Exited on unexpected signal.
+                         */
+                        update_task_state(task, FATAL);
+                        push_log(task, "Task %s exited with unrecognized signal %d. Marking it as FATAL.", task->parser.name, signal);
+                    }
                     task->intern.stop_signal = signal;
-                    push_log(task, "Task %s exited with signal %d", task->parser.name, signal);
                 }
                 else
                 {
+                    /*
+                     * Exited on unknown status, mark it as FATAL.
+                     */
                     update_task_state(task, FATAL);
                     push_log(task, "Task %s exited with unknown status", task->parser.name);
                 }
-                /* its no more valid */
+                /*
+                 * its no more valid, this way we'll not check again.
+                 */
                 task->intern.pid = -1;
             }
         }

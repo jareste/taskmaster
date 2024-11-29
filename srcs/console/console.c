@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <unistd.h>
+#include <time.h>
 
 #include <taskmaster.h>
 #include <ft_malloc.h>
@@ -20,6 +21,7 @@ void cmd_restart(void* param);
 void cmd_delete(void* param);
 void cmd_show_task(void* task);
 void cmd_modify_task(void* param);
+void cmd_time(void* param);
 
 typedef enum {
     NEW_SUCCESS,
@@ -47,6 +49,7 @@ command_t commands[] = {
     {"kms", cmd_kms, "Finish the program execution."},
     {"show", cmd_show_task, "Show task details."},
     {"modify", cmd_modify_task, "Modify task details."},
+    {"time", cmd_time, "Show the current time."},
     {NULL, NULL, NULL}
 };
 
@@ -571,9 +574,6 @@ void cmd_show_task(void* task)
 
 static int modify_task(task_t* task, const char* param)
 {
-    if (task == NULL || param == NULL)
-        return -1;
-
     typedef struct
     {
         const char* param_name;
@@ -605,6 +605,17 @@ static int modify_task(task_t* task, const char* param)
         {"umask", "Umask", NEW_PARSE_INT, &(int){0}, (void**)&task->parser.umask, NEW_PARAM_INT, false, false},
     };
 
+    if (task == NULL || param == NULL)
+    {
+        fprintf(stdout, "List of parameters:\n");
+        for (size_t i = 0; i < sizeof(configs) / sizeof(configs[0]); i++)
+        {
+            fprintf(stdout, "%s%s", configs[i].param_name, (i == sizeof(configs) / sizeof(configs[0]) - 1) ? "" : ", ");
+        }
+        fprintf(stdout, "\n");
+        return -1;
+    }
+
     for (size_t i = 0; i < sizeof(configs) / sizeof(configs[0]); i++)
     {
         if (strcasecmp(param, configs[i].param_name) == 0)
@@ -623,16 +634,21 @@ static int modify_task(task_t* task, const char* param)
         }
     }
 
-    fprintf(stdout, "Unknown parameter: %s\n", param);
+    fprintf(stdout, "Unknown parameter: %s. Try \"modify -h\" for the full list of params.\n", param);
     return -1;
 }
-
 
 void cmd_modify_task(void* param)
 {
     if (!param)
     {
-        fprintf(stdout, "Usage: modify <task_name>\n");
+        fprintf(stdout, "Usage: modify <task_name>.\n");
+        return;
+    }
+
+    if (strcmp((const char*)param, "-h") == 0)
+    {
+        modify_task(NULL, NULL);
         return;
     }
 
@@ -680,3 +696,11 @@ void cmd_modify_task(void* param)
     free(line);
 }
 
+void cmd_time(void* param)
+{
+    (void)param;
+    time_t t = time(NULL);
+    struct tm tm = *localtime(&t);
+    fprintf(stdout, "Current time: %d-%02d-%02d %02d:%02d:%02d\n", tm.tm_year + 1900,\
+    tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+}
