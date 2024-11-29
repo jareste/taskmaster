@@ -170,10 +170,10 @@ int start_task(task_t* task)
     return (0);
 }
 
+/* what does it do? */
 void update_next_steps(task_t* task)
 {
     (void)task;
-
 }
 
 void update_task_cmd_state(task_t* task, cmd_request cmd)

@@ -15,11 +15,11 @@ void cmd_kms(void* param);
 void cmd_print_logs(void* param);
 void cmd_kill_supervisor(void* param);
 void cmd_start(void* param);
-void cmd_new(void* param); /* TODO */
-void cmd_restart(void* param); /* TODO */
+void cmd_new(void* param);
+void cmd_restart(void* param);
 void cmd_delete(void* param);
 void cmd_show_task(void* task);
-void cmd_modify_task(void* param); /* TODO */
+void cmd_modify_task(void* param);
 
 typedef enum {
     NEW_SUCCESS,
@@ -35,18 +35,18 @@ typedef struct {
 
 command_t commands[] = {
     {"help", cmd_help, "Show this help menu"},
-    {"new", cmd_new, "Create a new task"}, /* TODO */
+    {"new", cmd_new, "Create a new task"},
     {"status", cmd_active, "Show tasks status"},
     {"start", cmd_start, "Start a specific task by name"},
     {"stop", cmd_stop, "Stop a specific task by name"},
     {"restart", cmd_restart, "Restart a specific task by name"},
     {"delete", cmd_delete, "Delete specific task by name."},
-    {"update", cmd_update, "Re-read the configuration file"}, /* TODO */
+    {"update", cmd_update, "Re-read the configuration file"},
     {"logs", cmd_print_logs, "Print logs for a specific task or all tasks"},
     {"kill", cmd_kill_supervisor, "Kill the supervisor"},
     {"kms", cmd_kms, "Finish the program execution."},
     {"show", cmd_show_task, "Show task details."},
-    {"modify", cmd_modify_task, "Modify task details."}, /* TODO */
+    {"modify", cmd_modify_task, "Modify task details."},
     {NULL, NULL, NULL}
 };
 
