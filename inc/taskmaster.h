@@ -74,7 +74,7 @@ typedef struct
     char*       stdout; /* where to write stdout */
     char*       stderr; /* wher the stderr should be written */
     bool        append_out; /* append outputs or just create new ones? */
-    bool        dtach; /* run with dtach (this overwrites stdout and stderr) */
+    char*       dtach; /* run with dtach (this overwrites stdout and stderr) */
     bool        autostart; /* autostart or wait CLI order? */
     AR_modes    ar; /* when to autorestart */
     int         startretries; /* if it fails to start how many times should we try? */

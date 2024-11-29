@@ -46,7 +46,7 @@ int main()
     exitcodes1[0] = 4; exitcodes1[1] = 0; exitcodes1[2] = 2; exitcodes1[3] = 3;
     exitcodes2[0] = 3; exitcodes2[1] = 1; exitcodes2[2] = 2;
     exitcodes3[0] = 3; exitcodes3[1] = 127; exitcodes3[2] = 3;
-    exitcodes4[0] = 4; exitcodes4[1] = 0; exitcodes4[2] = 2; exitcodes4[3] = 3;
+    exitcodes4[0] = 4; exitcodes4[1] = 0; exitcodes4[2] = 1; exitcodes4[3] = 3;
 
     char **args = NEW(char*, 4);
     args[0] = strdup("/bin/ls"); args[1] = strdup("-l"); args[2] = strdup("-a"); args[3] = NULL;
@@ -66,8 +66,8 @@ int main()
     char **env3 = NEW(char*, 4);
     env3[0] = strdup("HOME=/usr/bin"); env3[1] = strdup("LOGNAME=bin"); env3[2] = strdup("PATH=/usr/bin"); env3[3] = NULL;
 
-    char **argv = NEW(char*, 4);
-    argv[0] = strdup("/bin/sh"); argv[1] = strdup("-c"); argv[2] = strdup("while :; do sleep 1; done"); argv[3] = NULL;
+    // char **argv = NEW(char*, 4);
+    // argv[0] = strdup("/bin/sh"); argv[1] = strdup("-c"); argv[2] = strdup("while :; do sleep 1; done"); argv[3] = NULL;
 
     char **envp = NEW(char*, 4);
     envp[0] = strdup("HOME=/usr/bin"); envp[1] = strdup("LOGNAME=bin"); envp[2] = strdup("PATH=/usr/bin"); envp[3] = NULL;
@@ -78,6 +78,7 @@ int main()
     m_tasks1->parser.args = args;
     m_tasks1->parser.dir = strdup("/");
     m_tasks1->parser.env = env;
+    m_tasks1->parser.dtach = strdup("/tmp/dtach/task1");
     m_tasks1->parser.autostart = true;
     m_tasks1->parser.ar = ALWAYS;
     m_tasks1->parser.startretries = 3;
@@ -96,6 +97,7 @@ int main()
     m_tasks2->parser.args = args2;
     m_tasks2->parser.dir = strdup("/home/user");
     m_tasks2->parser.env = env2;
+    m_tasks2->parser.dtach = strdup("/tmp/dtach/task2");
     m_tasks2->parser.autostart = false;
     m_tasks2->parser.ar = SUCCESS;
     m_tasks2->parser.startretries = 5;
@@ -114,6 +116,7 @@ int main()
     m_tasks3->parser.args = args3;
     m_tasks3->parser.dir = strdup("/usr/bin");
     m_tasks3->parser.env = env3;
+    m_tasks3->parser.dtach = strdup("/tmp/dtach/task3");
     m_tasks3->parser.autostart = true;
     m_tasks3->parser.ar = FAILURE;
     m_tasks3->parser.startretries = 2;
@@ -129,11 +132,12 @@ int main()
     task_t *m_tasks4 = NEW(task_t, 1);
     m_tasks4->parser.name = strdup("task4");
     m_tasks4->parser.cmd = strdup("/bin/sh");
-    m_tasks4->parser.args = argv;
+    m_tasks4->parser.args = NULL;
     m_tasks4->parser.dir = strdup("/");
     m_tasks4->parser.env = envp;
+    m_tasks4->parser.dtach = strdup("/tmp/dtach/task4");
     m_tasks4->parser.autostart = true;
-    m_tasks4->parser.ar = ALWAYS;
+    m_tasks4->parser.ar = UNEXPECTED;
     m_tasks4->parser.startretries = 3;
     m_tasks4->parser.starttime = 1;
     m_tasks4->parser.stoptime = 1;
@@ -154,11 +158,6 @@ int main()
 
     m_active_tasks = tasks;
 
-
-    // printf("task1: %p\n", m_tasks1);
-    // printf("task2: %p\n", m_tasks2);
-    // printf("task3: %p\n", m_tasks3);
-    // printf("task4: %p\n", m_tasks4);
     if (pipe(pipefd) == -1) { perror("pipe"); return 1; }
 
     /* maybe the one launched on task must be supervisor?
@@ -171,25 +170,6 @@ int main()
     pthread_join(console_thread, NULL);
 
     printf("Hello world\n");
-
-
-    // Don't forget to free the allocated memory when done
-    // free(m_tasks1);
-    // free(m_tasks2);
-    // free(m_tasks3);
-    // free(m_tasks4);
-    // free(exitcodes1);
-    // free(exitcodes2);
-    // free(exitcodes3);
-    // free(args);
-    // free(env);
-    // free(args2);
-    // free(env2);
-    // free(args3);
-    // free(env3);
-    // free(argv);
-    // free(envp);
-
 
     return 0;
 }

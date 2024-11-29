@@ -18,6 +18,39 @@ void update_task_state(task_t* task, task_state state);
 void push_log(task_t* task, const char* format, ...);
 static void cleanup(task_t* tasks, bool kill_all);
 
+void launch_dtach(task_t* task)
+{
+    int arg_count = 0;
+    if (task->parser.args == NULL)
+    {
+        arg_count = 0;
+    }
+    else
+    {
+        while (task->parser.args[arg_count] != NULL)
+        {
+            arg_count++;
+        }
+    }
+
+    char** dtach_args = malloc((6 + arg_count) * sizeof(char*));
+
+    dtach_args[0] = "/home/jareste-/goinfre/dtach/dtach";
+    dtach_args[1] = "-n";
+    dtach_args[2] = task->parser.dtach;
+    dtach_args[3] = "-Ez";
+    dtach_args[4] = task->parser.cmd;
+    for (int i = 0; i < arg_count; i++)
+    {
+        dtach_args[5 + i] = task->parser.args[i];
+    }
+    dtach_args[5 + arg_count] = NULL;
+
+    push_log(task, "Launching dtach with command %s. Fifo on %s.", task->parser.cmd, task->parser.dtach);
+    execve("/home/jareste-/goinfre/dtach/dtach", dtach_args, task->parser.env);
+    free(dtach_args);
+}
+
 int start_task(task_t* task)
 {
     int pipefd[2]; /* used just for tracing unexpected errors */
@@ -110,7 +143,12 @@ int start_task(task_t* task)
             }
         }
 
-        execve(task->parser.cmd, task->parser.args, task->parser.env);
+        if (task->parser.dtach != NULL)
+        {
+            launch_dtach(task);
+        }
+        else
+            execve(task->parser.cmd, task->parser.args, task->parser.env);
 
         snprintf(buffer, sizeof(buffer), "Failed to start task %s due to %s.", 
                  task->parser.name, strerror(errno));
@@ -252,6 +290,24 @@ void delete_logs(task_t* task)
     }
 }
 
+void log_dtach_pipe(task_t* task)
+{
+    if (task->parser.dtach == NULL)
+    {
+        return;
+    }
+
+    if (task->intern.exit_status == 1)
+    {
+        push_log(task, "Dtach was already running on: %s", task->parser.dtach);
+        push_log(task, "To attach to it, open a new terminal and use: dtach -a %s", task->parser.dtach);
+    }
+    if (task->intern.exit_status == 0)
+    {
+        push_log(task, "Dtach started on: %s", task->parser.dtach);
+        push_log(task, "To attach to it, open a new terminal and use: dtach -a %s", task->parser.dtach);
+    }
+}
 
 void modify_task_param(void* param, void* new_value, task_param type, bool should_free)
 {
@@ -367,6 +423,11 @@ void free_task(task_t* task)
     {
         free(task->parser.stdout);
         task->parser.stdout = NULL;
+    }
+    if (task->parser.dtach)
+    {
+        free(task->parser.dtach);
+        task->parser.dtach = NULL;
     }
     if (task->parser.stderr)
     {
@@ -610,12 +671,16 @@ int supervisor(task_t* tasks)
                      * Exited on normal execution.
                      */
                     int exit_status = WEXITSTATUS(status);
-                    for (i = task->parser.exitcodes[0]; i < task->parser.exitcodes[0]; i++)
+
+                    task->intern.exit_status = exit_status;
+
+                    for (i = 0; i < task->parser.exitcodes[0]; i++)
                     {
                         if (task->parser.exitcodes[i] == exit_status)
                         {
                             update_task_state(task, EXITED);
                             push_log(task, "Task %s exited with status %d", task->parser.name, exit_status);
+                            log_dtach_pipe(task);
                             break;
                         }
                     }
@@ -624,9 +689,7 @@ int supervisor(task_t* tasks)
                     {
                         update_task_state(task, FATAL);
                         push_log(task, "Task %s exited with unrecognized status %d. Marking it as FATAL.", task->parser.name, exit_status);
-                    }
-                
-                    task->intern.exit_status = exit_status;
+                    }                
                 }
                 else if (WIFSIGNALED(status))
                 {
