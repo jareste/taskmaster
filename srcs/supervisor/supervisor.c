@@ -11,6 +11,10 @@
 #include <ft_malloc.h>
 #include <taskmaster.h>
 
+#ifndef DTACH_PATH
+#define DTACH_PATH "/home/jareste-/goinfre/dtach/dtach"
+#endif
+
 static bool die = false;
 pthread_mutex_t g_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -35,7 +39,7 @@ void launch_dtach(task_t* task)
 
     char** dtach_args = malloc((6 + arg_count) * sizeof(char*));
 
-    dtach_args[0] = "/home/jareste-/goinfre/dtach/dtach";
+    dtach_args[0] = DTACH_PATH;
     dtach_args[1] = "-n";
     dtach_args[2] = task->parser.dtach;
     dtach_args[3] = "-Ez";
@@ -47,7 +51,7 @@ void launch_dtach(task_t* task)
     dtach_args[5 + arg_count] = NULL;
 
     push_log(task, "Launching dtach with command %s. Fifo on %s.", task->parser.cmd, task->parser.dtach);
-    execve("/home/jareste-/goinfre/dtach/dtach", dtach_args, task->parser.env);
+    execve(DTACH_PATH, dtach_args, task->parser.env);
     free(dtach_args);
 }
 
