@@ -38,6 +38,7 @@ int main()
 {
     signal(SIGINT, handle_sigint);
 
+    /*
     int *exitcodes1 = NEW(int, 4);
     int *exitcodes2 = NEW(int, 3);
     int *exitcodes3 = NEW(int, 3);
