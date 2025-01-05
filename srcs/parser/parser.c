@@ -1,31 +1,21 @@
 
-#include <pthread.h>
-#include <sys/types.h>
-#include <stdio.h>
 #include <signal.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <string.h>
 #include <ctype.h>
-#include <stdbool.h>
-#include <stddef.h> 
 #include <string.h> 
 #include <errno.h>
 #include <limits.h>
 #include <stdio.h>
-#include <stddef.h> 
 
-#include <stddef.h>
+#include <ft_malloc.h>
 
-#include "task.h"
+#include <taskmaster.h>
 
 struct task_t* parse_config(char *file_path);
 int validate_cmd(char *value, struct task_t *task, unsigned int line_number);
 bool validate_ints(char *value, struct task_t *task, int identify, unsigned int line_number);
 char	*ft_substr(char *s, unsigned int start, size_t len);
 char *ft_strtrim(char *s1, char *set);
-t_task *new_task(char *name_service);
+task_t *new_task(char *name_service);
 int validate_str(char *value, struct task_t *task, unsigned int line_number, int identify);
 void validate_exitcodes(char *value, struct task_t *task, unsigned int line_number);
 void validate_envs(char *line, struct task_t *task, unsigned int line_number);
@@ -85,7 +75,7 @@ void fill_fields(char *name, char *value, struct task_t *task, unsigned int line
     else if (strcmp("starttime", name) == 0)
         validate_ints(value, task, 3, line_number);
     else if (strcmp("stopsignal", name) == 0)
-        task->stopsignal = parse_stopsignal(value, line_number);
+        task->parser.stopsignal = parse_stopsignal(value, line_number);
     else if (strcmp("stoptime", name) == 0)
         validate_ints(value, task, 4, line_number);
     else if (strcmp("stoptimeout", name) == 0)
@@ -132,7 +122,7 @@ void check_config_values(char *line, struct task_t *task, unsigned int line_numb
         free(name);
 }
 
-char *rm_space(char *s, int len)
+char *rm_space(char *s)
 {
     char *res;
     int i = 0;
@@ -149,14 +139,13 @@ char *rm_space(char *s, int len)
 }
 
 
-struct task_t* parse_config(char *file_path)
+task_t* parse_config(char *file_path)
 {
     char *line = NULL;
     size_t len = 0;
     unsigned int line_number = 0;
-    t_task *current_task = NULL;
-    t_task *tasks = NULL;
-    list_item_t *last_item = NULL;
+    task_t *current_task = NULL;
+    task_t *tasks = NULL;
 
     if (!file_path)
         return NULL;
@@ -186,9 +175,9 @@ struct task_t* parse_config(char *file_path)
         {
             if (current_task)
                 env_active = 0;
-            *trimmed_line++;
+            trimmed_line++; //aqui antes estaba asi *trimedline++;
             trimmed_line[j - 1] = '\0';
-            trimmed_line = rm_space(trimmed_line, strlen(trimmed_line));
+            trimmed_line = rm_space(trimmed_line);
             current_task = new_task(trimmed_line);
             if (!current_task)
             {
@@ -214,31 +203,32 @@ struct task_t* parse_config(char *file_path)
     }
     free(line);
     fclose(file);
+    create_config_file("nada", tasks); //cambiar nombre del fichero al bueno
     return (tasks);
 }
 
-t_task *new_task(char *name_service)
+task_t *new_task(char *name_service)
 {
-    t_task *task = (t_task*)malloc(sizeof(t_task));
+    task_t *task = (task_t*)malloc(sizeof(task_t));
     if (task == NULL)
         return (NULL);
-    task->name = strdup(name_service);
-    task->cmd = NULL;
-    task->args = NULL;
-    task->dir = NULL;
-    task->stdout = NULL;
-    task->stderr = NULL;
-    task->autostart = true;
-    task->autorestart = ALWAYS;
-    task->startretries = 0;
-    task->starttime = 0;
-    task->stoptime = 0;
-    task->exitcodes = NULL;
-    task->stopsignal = 0;
-    task->stoptimeout = 0;
-    task->umask = 0;
-    task->procs = 0;
-    task->env = NULL;
+    task->parser.name = strdup(name_service);
+    task->parser.cmd = NULL;
+    task->parser.args = NULL;
+    task->parser.dir = NULL;
+    task->parser.stdout = NULL;
+    task->parser.stderr = NULL;
+    task->parser.autostart = true;
+    task->parser.ar = ALWAYS;
+    task->parser.startretries = 0;
+    task->parser.starttime = 0;
+    task->parser.stoptime = 0;
+    task->parser.exitcodes = NULL;
+    task->parser.stopsignal = 0;
+    task->parser.stoptimeout = 0;
+    task->parser.umask = 0;
+    task->parser.procs = 0;
+    task->parser.env = NULL;
     return task;
 }
 
@@ -304,15 +294,15 @@ bool validate_ints(char *value, struct task_t *task, int identify, unsigned int 
             return false;
         }
         if (identify == 1)
-            task->procs = (int)result;
+            task->parser.procs = (int)result;
         else if (identify == 2)
-            task->startretries = (int)result;
+            task->parser.startretries = (int)result;
         else if (identify == 3)
-            task->starttime = (int)result;
+            task->parser.starttime = (int)result;
         else if (identify == 4)
-            task->stoptime = (int)result;
+            task->parser.stoptime = (int)result;
         else if (identify == 5)
-            task->stoptimeout = (int)result;
+            task->parser.stoptimeout = (int)result;
         return true;
     }
     return false;    
@@ -320,23 +310,21 @@ bool validate_ints(char *value, struct task_t *task, int identify, unsigned int 
 
 void allocate_envs(struct task_t *task)
 {
-    if (!task->env)
+    if (!task->parser.env)
     {
         env_count = 1;
-        task->env = malloc(sizeof(char *) * (env_count));
+        task->parser.env = malloc(sizeof(char *) * (env_count));
     }
     else
     {
         env_count++;
-        task->env = realloc(task->env, sizeof(char *) * (env_count));
+        task->parser.env = realloc(task->parser.env, sizeof(char *) * (env_count));
     }
-    task->env[env_count - 1] = NULL;
+    task->parser.env[env_count - 1] = NULL;
 }
 
 void validate_envs(char *line, struct task_t *task, unsigned int line_number)
 {
-    char *name;
-    char *value;
     int i = 0;
     int j = 0;
 
@@ -375,7 +363,7 @@ void validate_envs(char *line, struct task_t *task, unsigned int line_number)
         return ;
     }
     allocate_envs(task);
-    task->env[env_count - 1] = line;
+    task->parser.env[env_count - 1] = line;
 }
 
 int validate_cmd(char *value, struct task_t *task, unsigned int line_number)
@@ -400,19 +388,19 @@ int validate_cmd(char *value, struct task_t *task, unsigned int line_number)
         free(res);
     }
     else
-        task->cmd = res;
+        task->parser.cmd = res;
     return (0);
 }
 
 void validate_bool(char *value, struct task_t *task, unsigned int line_number)
 {
     if (strcmp(value, "1") == 0 || strcmp(value, "true") == 0)
-        task->autostart = true;
+        task->parser.autostart = true;
     else if (strcmp(value, "0") == 0 || strcmp(value, "false") == 0)
-        task->autostart = false;
+        task->parser.autostart = false;
     else
     {
-        printf("Error linea %d: Autorestart solo acepta valores true/false.\n", line_number);
+        printf("Error linea %d: Autostart solo acepta valores true/false.\n", line_number);
     }
 }
 
@@ -430,17 +418,17 @@ int validate_str(char *value, struct task_t *task, unsigned int line_number, int
         i++;
     }
     if (identify == 1)
-        task->umask = strdup(value);
+        task->parser.umask = strdup(value);
     else if (identify == 2)
-        task->dir = strdup(value);
+        task->parser.dir = strdup(value);
     else if (identify == 3)
         validate_bool(value, task, line_number);
     else if (identify == 4)
-        task->autorestart = parse_autorestart(value);
+        task->parser.ar = parse_autorestart(value);
     else if (identify == 5)
-        task->stdout = strdup(value);
+        task->parser.stdout = strdup(value);
     else if (identify == 6)
-        task->stderr = strdup(value);
+        task->parser.stderr = strdup(value);
     else if (identify == 7)
         validate_exitcodes(value, task, line_number);
     return (0);
@@ -449,11 +437,9 @@ int validate_str(char *value, struct task_t *task, unsigned int line_number, int
 void validate_exitcodes(char *value, struct task_t *task, unsigned int line_number)
 {
     char *s;
-    int *res;
     int j = 0;
     int k;
     int i = strlen(value) - 1;
-    int x = 0;
     int count_exitcodes = 0;
     if (value[0] != '{' && value[i] != '}')
     {
@@ -478,7 +464,7 @@ void validate_exitcodes(char *value, struct task_t *task, unsigned int line_numb
             j++;
         i++;
     }
-    task->exitcodes = (int *)malloc((j + 2) * sizeof(int));
+    task->parser.exitcodes = (int *)malloc((j + 2) * sizeof(int));
     j = 0;
     i = 1;
     while (value[i])
@@ -494,16 +480,16 @@ void validate_exitcodes(char *value, struct task_t *task, unsigned int line_numb
         {
             printf("Error línea %d: |%s| no es un exitcode válido.\n", line_number, s);
             free(s);
-            if (task->exitcodes)
-                task->exitcodes = NULL;
+            if (task->parser.exitcodes)
+                task->parser.exitcodes = NULL;
             return;
         }
         free(s);
-        task->exitcodes[j + 1] = (int)num;
+        task->parser.exitcodes[j + 1] = (int)num;
         j++;
         i = k + 1;
     }
-    task->exitcodes[0] = count_exitcodes;
+    task->parser.exitcodes[0] = count_exitcodes;
 }
 
 
@@ -561,38 +547,38 @@ void create_config_file(char *file_name, struct task_t *tasks)
         perror("Error al abrir el config file\n");
         return ;
     }
-    t_task *current = tasks;
+    task_t *current = tasks;
     int i = 0;
     int len = 0;
     while (current)
     {
-        fprintf(file, "[%s]\n", current->name);
-        fprintf(file, " cmd: \"%s\"\n", current->cmd);
-        fprintf(file, " numprocs: %d\n", current->procs);
-        fprintf(file, " umask: %s\n", current->umask);
-        fprintf(file, " autostart: %s\n", current->autostart ? "true" : "false");
-        fprintf(file, " autorestart: %s\n", AR_modes_strings[current->autorestart]);
+        fprintf(file, "[%s]\n", current->parser.name);
+        fprintf(file, " cmd: \"%s\"\n", current->parser.cmd);
+        fprintf(file, " numprocs: %d\n", current->parser.procs);
+        fprintf(file, " umask: %s\n", current->parser.umask);
+        fprintf(file, " autostart: %s\n", current->parser.autostart ? "true" : "false");
+        fprintf(file, " autorestart: %s\n", AR_modes_strings[current->parser.ar]);
         i = 0;
-        if (current->exitcodes)
+        if (current->parser.exitcodes)
         {
-            len = current->exitcodes[0];
+            len = current->parser.exitcodes[0];
             fprintf(file, " exitcodes: {");
-            while (current->exitcodes && ++i < len)
-                fprintf(file, "%d,", current->exitcodes[i]);
-            fprintf(file, "%d}\n", current->exitcodes[i]);
+            while (current->parser.exitcodes && ++i < len)
+                fprintf(file, "%d,", current->parser.exitcodes[i]);
+            fprintf(file, "%d}\n", current->parser.exitcodes[i]);
         }
-        fprintf(file, " startretries: %d\n", current->startretries);
-        fprintf(file, " starttime: %d\n", current->starttime);
-        fprintf(file, " stopsignal: %s\n", Signals_strings[current->stopsignal]);
-        fprintf(file, " stoptime: %d\n", current->stoptime);
-        fprintf(file, " stdout: %s\n", current->stdout);
-        fprintf(file, " stderr: %s\n", current->stderr);
+        fprintf(file, " startretries: %d\n", current->parser.startretries);
+        fprintf(file, " starttime: %d\n", current->parser.starttime);
+        fprintf(file, " stopsignal: %s\n", Signals_strings[current->parser.stopsignal]);
+        fprintf(file, " stoptime: %d\n", current->parser.stoptime);
+        fprintf(file, " stdout: %s\n", current->parser.stdout);
+        fprintf(file, " stderr: %s\n", current->parser.stderr);
         i = -1;
-        if (current->env)
+        if (current->parser.env)
         {
             fprintf(file, " env:\n");
-            while (current->env && current->env[++i])
-                fprintf(file, " -%s\n", current->env[i]);
+            while (current->parser.env && current->parser.env[++i])
+                fprintf(file, " -%s\n", current->parser.env[i]);
         }
         current = FT_LIST_GET_NEXT(&tasks, current);
     }

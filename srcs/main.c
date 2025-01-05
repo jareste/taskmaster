@@ -34,17 +34,17 @@ void handle_sigint(int sig)
     exit_flag = true;
 }
 
-int main()
+int main(int argc, char **argv)
 {
+    argc++;
     signal(SIGINT, handle_sigint);
 
-    t_task *tasks = parse_config(argv[1]);
+    task_t *tasks = parse_config(argv[1]);
     if (!tasks) {
         fprintf(stderr, "Error al analizar la configuración.\n");
         return EXIT_FAILURE;
     }
-    create_config_file("nada", tasks); //cambiar prueba por la ruta del fichero que quieres crear
-    
+    create_config_file("nada", tasks);    
     /*FT_LIST_ADD_LAST(&tasks, m_tasks1);
     FT_LIST_ADD_LAST(&tasks, m_tasks2);
     FT_LIST_ADD_LAST(&tasks, m_tasks3);
