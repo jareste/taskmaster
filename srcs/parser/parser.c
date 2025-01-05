@@ -211,8 +211,6 @@ task_t* parse_config(char *file_path)
 task_t *new_task(char *name_service)
 {
     task_t *task = (task_t*)malloc(sizeof(task_t));
-    if (task == NULL)
-        return (NULL);
     task->parser.name = strdup(name_service);
     task->parser.cmd = NULL;
     task->parser.args = NULL;
@@ -520,16 +518,12 @@ char	*ft_substr(char *s, unsigned int start, size_t len)
 	if (start > strlen(s))
 	{
 		res = malloc(1);
-		if (!res)
-			return (0);
 		res[0] = '\0';
 		return (res);
 	}
 	if (strlen(s) - start < len)
 		len = strlen(s) - start;
 	res = malloc(sizeof(char) * (len + 1));
-	if (!res)
-		return (0);
 	while (start < strlen(s) && i < len && s[start])
 		res[i++] = s[start++];
 	res[i] = '\0';
@@ -600,8 +594,6 @@ char	**ft_split(char *s)
 	if (!s)
 		return (0);
 	res = malloc(sizeof(char *) * (count_words(s) + 1));
-	if (!res)
-		return (0);
 	res = write_result(s, res);
 	return (res);
 }
