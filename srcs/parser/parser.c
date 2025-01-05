@@ -314,14 +314,14 @@ void allocate_envs(struct task_t *task)
     if (!task->parser.env)
     {
         env_count = 1;
-        task->parser.env = malloc(sizeof(char *) * (env_count));
+        task->parser.env = malloc(sizeof(char *) * (env_count + 1));
     }
     else
     {
         env_count++;
-        task->parser.env = realloc(task->parser.env, sizeof(char *) * (env_count));
+        task->parser.env = realloc(task->parser.env, sizeof(char *) * (env_count + 1));
     }
-    task->parser.env[env_count - 1] = NULL;
+    task->parser.env[env_count] = NULL;
 }
 
 void validate_envs(char *line, struct task_t *task, unsigned int line_number)
@@ -599,14 +599,6 @@ char	**ft_split(char *s)
 	i = 0;
 	if (!s)
 		return (0);
-    while (*s && !isspace((unsigned char)*s))
-        s++;
-    while (*s && isspace((unsigned char)*s))
-        s++;
-    if (*s == '\0')
-    {
-        return (NULL);
-    }
 	res = malloc(sizeof(char *) * (count_words(s) + 1));
 	if (!res)
 		return (0);
