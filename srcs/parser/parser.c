@@ -19,6 +19,7 @@ task_t *new_task(char *name_service);
 int validate_str(char *value, struct task_t *task, unsigned int line_number, int identify);
 void validate_exitcodes(char *value, struct task_t *task, unsigned int line_number);
 void validate_envs(char *line, struct task_t *task, unsigned int line_number);
+char	**ft_split(char *s);
 
 char** parse_array(char* str)
 {
@@ -388,7 +389,20 @@ int validate_cmd(char *value, struct task_t *task, unsigned int line_number)
         free(res);
     }
     else
-        task->parser.cmd = res;
+    {
+        i = 0;
+        while (res[i] && !isspace(res[i]))
+            i++;
+        task->parser.cmd = ft_substr(res, 0, i);
+        if (task->parser.cmd && task->parser.cmd[0] != '/')
+        {
+            printf("Error linea %d: El comando debe empezar por '/'\n", line_number);
+            free(task->parser.cmd);
+            task->parser.cmd = NULL;
+        }
+        else
+            task->parser.args = ft_split(res);
+    }
     return (0);
 }
 
@@ -522,6 +536,84 @@ char	*ft_substr(char *s, unsigned int start, size_t len)
 	return (res);
 }
 
+static	void	ft_free_split(char **res)
+{
+	int	i;
+
+	i = -1;
+	while (res[++i])
+		free(res[i]);
+	free(res);
+}
+
+static	size_t	count_words(char *s)
+{
+	size_t	i;
+	size_t	words;
+
+	i = 0;
+	words = 0;
+	while (s[i])
+	{
+		if ((isspace((unsigned char)s[i + 1]) || s[i + 1] == '\0') && !isspace((unsigned char)s[i]))
+			words++;
+		i++;
+	}
+	return (words);
+}
+
+static	char	**write_result(char *s, char	**res)
+{
+	size_t	start;
+	size_t	i;
+	size_t	word;
+
+	start = 0;
+	i = 0;
+	word = 0;
+	while (s[i])
+	{
+		if ((isspace((unsigned char)s[i + 1]) || s[i + 1] == '\0') && !isspace((unsigned char)s[i]))
+		{
+			res[word] = ft_substr(s, start, i - start + 1);
+			if (!res[word])
+			{
+				ft_free_split(res);
+				return (0);
+			}
+			word++;
+		}
+		if (isspace((unsigned char)s[i]) && (!isspace((unsigned char)s[i + 1]) || s[i + 1] != '\0'))
+			start = i + 1;
+		i++;
+	}
+	res[word] = 0;
+	return (res);
+}
+
+char	**ft_split(char *s)
+{
+	size_t	i;
+	char	**res;
+
+	i = 0;
+	if (!s)
+		return (0);
+    while (*s && !isspace((unsigned char)*s))
+        s++;
+    while (*s && isspace((unsigned char)*s))
+        s++;
+    if (*s == '\0')
+    {
+        return (NULL);
+    }
+	res = malloc(sizeof(char *) * (count_words(s) + 1));
+	if (!res)
+		return (0);
+	res = write_result(s, res);
+	return (res);
+}
+
 char	*ft_strtrim(char *s1, char *set)
 {
 	unsigned int	len;
@@ -567,17 +659,17 @@ void create_config_file(char *file_name, struct task_t *tasks)
                 fprintf(file, "%d,", current->parser.exitcodes[i]);
             fprintf(file, "%d}\n", current->parser.exitcodes[i]);
         }
-        fprintf(file, " startretries: %d\n", current->parser.startretries);
+        fprintf(file, " startretries: %d\n", current->parser.startretries);\
         fprintf(file, " starttime: %d\n", current->parser.starttime);
         fprintf(file, " stopsignal: %s\n", Signals_strings[current->parser.stopsignal]);
         fprintf(file, " stoptime: %d\n", current->parser.stoptime);
         fprintf(file, " stdout: %s\n", current->parser.stdout);
         fprintf(file, " stderr: %s\n", current->parser.stderr);
-        i = -1;
+        i = 0;
         if (current->parser.env)
         {
             fprintf(file, " env:\n");
-            while (current->parser.env && current->parser.env[++i])
+            while (current->parser.env && i + 1 < env_count && current->parser.env[++i])
                 fprintf(file, " -%s\n", current->parser.env[i]);
         }
         current = FT_LIST_GET_NEXT(&tasks, current);

@@ -1,0 +1,55 @@
+[nginx]
+		cmd: "/usr/local/bin/nginx -c /etc/nginx/test.conf"
+		numprocs: 1
+		umask:       	 022     
+		workingdir: /tmp
+		autostart: true
+		autorestart: unexpected
+		exitcodes: {0,1,127,9}
+		startretries: 1
+		starttime: 8
+		stopsignal:      TERM        
+		stoptime: 5
+		stdout: /tmp/nginx.stdout
+		stderr: /tmp/nginx.stderr
+		env:
+		-USER=gemartin
+		-aa=buenas
+		-xd=axs
+		-nada=
+		-naaaaaaa
+		-hola==aa
+		-vvv=xxx           
+		STARTED_BY: taskmaster     
+		ANSWER: 42
+[vogsphere]
+		cmd: "/usr/local/bin/vogsphere-worker --no-prefork"
+		numprocs: 8
+		umask: 077
+		workingdir: /tmp
+		autostart: true
+		autorestart: unexpected
+		exitcodes: {0}
+		startretries: 3
+		starttime: 5
+		stopsignal: USR1
+		stoptime: 10
+		stdout: /tmp/vgsworker.stdout
+		stderr: /tmp/vgsworker.stderr
+[wordpress]
+		cmd: "/usr/local/bin/takkk --no-prefork"
+		numprocs: 4
+		umask: 072
+		workingdir: /tmp/aaa
+		autostart: false
+		autorestart: unexpected
+		exitcodes: {0,5,120,3,150,111,02}
+		startretries: 4
+		starttime: 6
+		stopsignal: KILL
+		env:
+		-NADA=gemartin
+		-Buennas=queee
+		stoptime: 12
+		stdout: /tmp/wp.stdout
+		stderr: /tmp/wp.stderr

@@ -44,7 +44,46 @@ int main(int argc, char **argv)
         fprintf(stderr, "Error al analizar la configuración.\n");
         return EXIT_FAILURE;
     }
-    create_config_file("nada", tasks);    
+
+    /*task_t *current = tasks;
+    while (current) 
+    {
+        printf("\nServicio: %s\n", current->parser.name);
+        printf("CMD: %s\n", current->parser.cmd);
+        int i = -1;
+        if (current->parser.args)
+        {
+            printf("ARGS:\n");
+            while (current->parser.args[++i])
+            {
+                printf("- %s\n", current->parser.args[i]);
+            }
+        }
+        printf("PROCS: %d\n", current->parser.procs);
+        printf("UMASK: %s\n", current->parser.umask);
+        printf("WDIR: %s\n", current->parser.dir);
+        printf("Autostart: %d\n", current->parser.autostart);
+        printf("Autorestart: %d\n", current->parser.ar);
+        printf("Startretries: %d\n", current->parser.startretries);
+        printf("Starttime: %d\n", current->parser.starttime);
+        printf("StopSignal: %d\n", current->parser.stopsignal);
+        printf("Stoptime: %d\n\n", current->parser.stoptime);
+        i = -1;
+        if (current->parser.exitcodes)
+        {
+            int len = current->parser.exitcodes[0];
+            while (current->parser.exitcodes && ++i <= len)
+            {
+                printf("Exitcode [%d] = %d\n", i, current->parser.exitcodes[i]);
+            }
+        }
+        i = -1;
+        while (current->parser.env && current->parser.env[++i])
+            printf("ENV: [%s]\n", current->parser.env[i]);
+        current = FT_LIST_GET_NEXT(&tasks, current);
+    }*/
+    create_config_file("nada", tasks);
+
     /*FT_LIST_ADD_LAST(&tasks, m_tasks1);
     FT_LIST_ADD_LAST(&tasks, m_tasks2);
     FT_LIST_ADD_LAST(&tasks, m_tasks3);
