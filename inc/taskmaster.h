@@ -64,7 +64,7 @@ typedef struct
     char log[1024];
 } log_t;
 
-typedef struct 
+typedef struct
 {
     char*       name; /* it's name */
     char*       cmd; /* cmd to launch */
@@ -99,7 +99,7 @@ typedef struct
     cmd_request cmd_request; /* what to do with this task */
 } intern_t;
 
-typedef struct task_t {
+typedef struct {
     list_item_t l;
 
     parser_t    parser; /* parser info */
@@ -131,15 +131,15 @@ AR_modes parse_autorestart(char* str);
 
 void modify_task_param(void* param, void* new_value, task_param type, bool should_free);
 
-struct task_t* parse_config(char *file_path);
-int validate_cmd(char *value, struct task_t *task, unsigned int line_number);
-bool validate_ints(char *value, struct task_t *task, int identify, unsigned int line_number);
+task_t* parse_config(char *file_path);
+int validate_cmd(char *value, task_t *task, unsigned int line_number);
+bool validate_ints(char *value, task_t *task, int identify, unsigned int line_number);
 char	*ft_substr(char *s, unsigned int start, size_t len);
 char *ft_strtrim(char *s1, char *set);
 task_t *new_task(char *name_service);
-int validate_str(char *value, struct task_t *task, unsigned int line_number, int identify);
-void validate_exitcodes(char *value, struct task_t *task, unsigned int line_number);
-void validate_envs(char *line, struct task_t *task, unsigned int line_number);
-void create_config_file(char *file_name, struct task_t *tasks);
+int validate_str(char *value, task_t *task, unsigned int line_number, int identify);
+void validate_exitcodes(char *value, task_t *task, unsigned int line_number);
+void validate_envs(char *line, task_t *task, unsigned int line_number);
+void create_config_file(char *file_name, task_t *tasks);
 
 #endif /* TASKMASTER_H */

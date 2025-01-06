@@ -10,15 +10,15 @@
 
 #include <taskmaster.h>
 
-struct task_t* parse_config(char *file_path);
-int validate_cmd(char *value, struct task_t *task, unsigned int line_number);
-bool validate_ints(char *value, struct task_t *task, int identify, unsigned int line_number);
+task_t* parse_config(char *file_path);
+int validate_cmd(char *value, task_t *task, unsigned int line_number);
+bool validate_ints(char *value, task_t *task, int identify, unsigned int line_number);
 char	*ft_substr(char *s, unsigned int start, size_t len);
 char *ft_strtrim(char *s1, char *set);
 task_t *new_task(char *name_service);
-int validate_str(char *value, struct task_t *task, unsigned int line_number, int identify);
-void validate_exitcodes(char *value, struct task_t *task, unsigned int line_number);
-void validate_envs(char *line, struct task_t *task, unsigned int line_number);
+int validate_str(char *value, task_t *task, unsigned int line_number, int identify);
+void validate_exitcodes(char *value, task_t *task, unsigned int line_number);
+void validate_envs(char *line, task_t *task, unsigned int line_number);
 char	**ft_split(char *s);
 
 char** parse_array(char* str)
@@ -55,7 +55,7 @@ int parse_stopsignal(const char *str, int line_number)
     return 0; // valor si no encuentra la señal
 }
 
-void fill_fields(char *name, char *value, struct task_t *task, unsigned int line_number)
+void fill_fields(char *name, char *value, task_t *task, unsigned int line_number)
 {
     if (strcmp("cmd", name) == 0)
         validate_cmd(value, task, line_number);
@@ -89,7 +89,7 @@ void fill_fields(char *name, char *value, struct task_t *task, unsigned int line
         fprintf(stderr, "Error linea %d: El campo introducido %s no es valido.\n", line_number, name);//esto deberia ir en los logs
 }
 
-void check_config_values(char *line, struct task_t *task, unsigned int line_number)
+void check_config_values(char *line, task_t *task, unsigned int line_number)
 {
     //printf("N: %d\n", line_number);
     char *name = ft_substr(line, 0, strchr(line, ':') - line);
@@ -204,13 +204,13 @@ task_t* parse_config(char *file_path)
     }
     free(line);
     fclose(file);
-    create_config_file("nada", tasks); //cambiar nombre del fichero al bueno
+    // create_config_file("nada", tasks); //cambiar nombre del fichero al bueno
     return (tasks);
 }
 
 task_t *new_task(char *name_service)
 {
-    task_t *task = (task_t*)malloc(sizeof(task_t));
+    task_t *task = NEW(task_t, 1);
     task->parser.name = strdup(name_service);
     task->parser.cmd = NULL;
     task->parser.args = NULL;
@@ -280,7 +280,7 @@ bool is_numeric(char *str, int line_number)
     return true;
 }
 
-bool validate_ints(char *value, struct task_t *task, int identify, unsigned int line_number)
+bool validate_ints(char *value, task_t *task, int identify, unsigned int line_number)
 {
     if (is_numeric(value, line_number))
     {
@@ -307,7 +307,7 @@ bool validate_ints(char *value, struct task_t *task, int identify, unsigned int 
     return false;    
 }
 
-void allocate_envs(struct task_t *task)
+void allocate_envs(task_t *task)
 {
     if (!task->parser.env)
     {
@@ -322,7 +322,7 @@ void allocate_envs(struct task_t *task)
     task->parser.env[env_count] = NULL;
 }
 
-void validate_envs(char *line, struct task_t *task, unsigned int line_number)
+void validate_envs(char *line, task_t *task, unsigned int line_number)
 {
     int i = 0;
     int j = 0;
@@ -365,7 +365,7 @@ void validate_envs(char *line, struct task_t *task, unsigned int line_number)
     task->parser.env[env_count - 1] = line;
 }
 
-int validate_cmd(char *value, struct task_t *task, unsigned int line_number)
+int validate_cmd(char *value, task_t *task, unsigned int line_number)
 {
     char *res;
     int i = -1;
@@ -404,7 +404,7 @@ int validate_cmd(char *value, struct task_t *task, unsigned int line_number)
     return (0);
 }
 
-void validate_bool(char *value, struct task_t *task, unsigned int line_number)
+void validate_bool(char *value, task_t *task, unsigned int line_number)
 {
     if (strcmp(value, "1") == 0 || strcmp(value, "true") == 0)
         task->parser.autostart = true;
@@ -416,7 +416,7 @@ void validate_bool(char *value, struct task_t *task, unsigned int line_number)
     }
 }
 
-int validate_str(char *value, struct task_t *task, unsigned int line_number, int identify)
+int validate_str(char *value, task_t *task, unsigned int line_number, int identify)
 {
     int i = 0;
 
@@ -446,7 +446,7 @@ int validate_str(char *value, struct task_t *task, unsigned int line_number, int
     return (0);
 }
 
-void validate_exitcodes(char *value, struct task_t *task, unsigned int line_number)
+void validate_exitcodes(char *value, task_t *task, unsigned int line_number)
 {
     char *s;
     int j = 0;
@@ -612,7 +612,7 @@ char	*ft_strtrim(char *s1, char *set)
 	return (ft_substr(s1, 0, len + 1));
 }
 
-void create_config_file(char *file_name, struct task_t *tasks)
+void create_config_file(char *file_name, task_t *tasks)
 {
     const char *AR_modes_strings[] = {"ALWAYS", "UNEXPECTED", "SUCCESS", "FAILURE", "NEVER"};
     const char *Signals_strings[] = {"", "HUP", "INT", "QUIT", "KILL", "", "ABRT", "", "FPE", "KILL", "USR1", "SEGV", "USR2", "PIPE", "ALRM", "TERM", "", "CHLD", "CONT", "STOP", "TSTP", "TTIN", "TTOU"};

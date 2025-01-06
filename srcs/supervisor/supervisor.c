@@ -443,6 +443,11 @@ void free_task(task_t* task)
         free(task->parser.exitcodes);
         task->parser.exitcodes = NULL;
     }
+    if (task->parser.umask)
+    {
+        free(task->parser.umask);
+        task->parser.umask = NULL;
+    }
     free(task);
 }
 
