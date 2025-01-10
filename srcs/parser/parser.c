@@ -51,7 +51,7 @@ int parse_stopsignal(const char *str, int line_number)
     else if (strcasecmp(str, "SIGTSTP") == 0 || strcasecmp(str, "TSTP") == 0) return SIGTSTP;
     else if (strcasecmp(str, "SIGTTIN") == 0 || strcasecmp(str, "TTIN") == 0) return SIGTTIN;
     else if (strcasecmp(str, "SIGTTOU") == 0 || strcasecmp(str, "TTOU") == 0) return SIGTTOU;
-    else printf("Error linea %d: Introduce una señal valida.\n", line_number);
+    else fprintf(stderr, "Error linea %d: Introduce una señal valida.\n", line_number);
     return 0; // valor si no encuentra la señal
 }
 
@@ -107,14 +107,14 @@ void check_config_values(char *line, struct task_t *task, unsigned int line_numb
     {
         free(tmp_value);
         free(name);
-        printf("Error linea %d: Despues de ':' debes introducir un valor.\n", line_number);
+        fprintf(stderr, "Error linea %d: Despues de ':' debes introducir un valor.\n", line_number);
         return ;
     }
     char *value = ft_strtrim(tmp_value_cp, " \t\n\r\v\f");
     if (strlen(value) != 0)
         fill_fields(name, value, task, line_number);
     else
-        printf("Error linea %d: Despues de ':' debes introducir un valor.\n", line_number);
+        fprintf(stderr, "Error linea %d: Despues de ':' debes introducir un valor.\n", line_number);
     if (tmp_value)
         free(tmp_value);
     if (value)
@@ -182,7 +182,7 @@ task_t* parse_config(char *file_path)
             current_task = new_task(trimmed_line);
             if (!current_task)
             {
-                printf("FALLA MALLOC\n"); //meter logs
+                //fprintf(stderr, "FALLA MALLOC\n");
                 fclose(file);
                 //free_tasks(tasks); NO BORRAR, DESCOMENTAR CUANDO SE PASE A LIMPIO 
                 free(line);
@@ -272,7 +272,7 @@ bool is_numeric(char *str, int line_number)
     {
         if (!isdigit(*str))
         {
-            printf("Error linea %d: Caracter no numerico.\n", line_number);
+            fprintf(stderr, "Error linea %d: Caracter no numerico.\n", line_number);
             return false;
         }
         ++str;
@@ -289,7 +289,7 @@ bool validate_ints(char *value, struct task_t *task, int identify, unsigned int 
 
         if (errno == ERANGE || result > INT_MAX || result < INT_MIN)
         {
-            printf("Error linea %d: El número proporcionado está fuera del rango de int.\n", line_number);
+            fprintf(stderr, "Error linea %d: El número proporcionado está fuera del rango de int.\n", line_number);
             return false;
         }
         if (identify == 1)
@@ -329,20 +329,20 @@ void validate_envs(char *line, struct task_t *task, unsigned int line_number)
 
     if (!line || line[0] == '\0')
     {
-        printf("Error linea %d: Debes introducir valores despues del '-'.\n", line_number);
+        fprintf(stderr, "Error linea %d: Debes introducir valores despues del '-'.\n", line_number);
     }
     while (line[i])
     {
         if (isspace(line[i]))
         {
-            printf("Error linea %d: Hay espacios no validos.\n", line_number);
+            fprintf(stderr, "Error linea %d: Hay espacios no validos.\n", line_number);
             return ;
         }
         if (line[i] == '=')
             j++;
         if (j > 1)
         {
-            printf("Error linea %d: Hay mas de un '='.\n", line_number);
+            fprintf(stderr, "Error linea %d: Hay mas de un '='.\n", line_number);
             return ;
         }
         i++;
@@ -352,13 +352,13 @@ void validate_envs(char *line, struct task_t *task, unsigned int line_number)
         i++;
     if (line[i] != '=')
     {
-        printf("Error linea %d: Debes incluir '=' para asignar valor a la env.\n", line_number);
+        fprintf(stderr, "Error linea %d: Debes incluir '=' para asignar valor a la env.\n", line_number);
         return ;
     }
     j = strlen(line);
     if (j == i + 1)
     {
-        printf("Error linea %d: Debes introducir un valor despues de '='.\n", line_number);
+        fprintf(stderr, "Error linea %d: Debes introducir un valor despues de '='.\n", line_number);
         return ;
     }
     allocate_envs(task);
@@ -372,18 +372,18 @@ int validate_cmd(char *value, struct task_t *task, unsigned int line_number)
     int quotes = 0;
 
     if (value[0] != '"' || value[strlen(value) - 1] != '"')
-        return (printf("Error linea %u: El comando debe estar escrito entre comillas dobles\n", line_number));
+        return (fprintf(stderr, "Error linea %u: El comando debe estar escrito entre comillas dobles\n", line_number));
     while (value[++i])
     {
         if (value[i] == '"')
             quotes++;
     }
     if (quotes != 2)
-        return (printf("Error linea %u: El comando debe contener 2 comillas dobles\n", line_number));
+        return (fprintf(stderr, "Error linea %u: El comando debe contener 2 comillas dobles\n", line_number));
     res = ft_substr(value, 1, strlen(value) - 2); //el startt 1 y len -2 es para qu itar las comillas dobles
     if (strlen(res) == 0)
     {
-        printf("Error linea %d: Comillas dobles vacias\n", line_number);
+        fprintf(stderr, "Error linea %d: Comillas dobles vacias\n", line_number);
         free(res);
     }
     else
@@ -392,14 +392,8 @@ int validate_cmd(char *value, struct task_t *task, unsigned int line_number)
         while (res[i] && !isspace(res[i]))
             i++;
         task->parser.cmd = ft_substr(res, 0, i);
-        if (task->parser.cmd && task->parser.cmd[0] != '/')
-        {
-            printf("Error linea %d: El comando debe empezar por '/'\n", line_number);
-            free(task->parser.cmd);
-            task->parser.cmd = NULL;
-        }
-        else
-            task->parser.args = ft_split(res);
+        task->parser.args = ft_split(res);
+        free(res);
     }
     return (0);
 }
@@ -412,7 +406,7 @@ void validate_bool(char *value, struct task_t *task, unsigned int line_number)
         task->parser.autostart = false;
     else
     {
-        printf("Error linea %d: Autostart solo acepta valores true/false.\n", line_number);
+        fprintf(stderr, "Error linea %d: Autostart solo acepta valores true/false.\n", line_number);
     }
 }
 
@@ -424,7 +418,7 @@ int validate_str(char *value, struct task_t *task, unsigned int line_number, int
     {
         if (isspace(value[i]))
         {
-            printf("Error linea %d: Solo se espera un argumento.\n", line_number);
+            fprintf(stderr, "Error linea %d: Solo se espera un argumento.\n", line_number);
             return (-1);
         }
         i++;
@@ -455,7 +449,7 @@ void validate_exitcodes(char *value, struct task_t *task, unsigned int line_numb
     int count_exitcodes = 0;
     if (value[0] != '{' && value[i] != '}')
     {
-        printf("Error linea %d: Los exitcodes deben estar entre {}.\n", line_number);
+        fprintf(stderr, "Error linea %d: Los exitcodes deben estar entre {}.\n", line_number);
         return ;
     }
     value[i] = '\0';
@@ -464,12 +458,12 @@ void validate_exitcodes(char *value, struct task_t *task, unsigned int line_numb
     {   
         if (value[i] == ',' && value[i + 1] == '\0')
         {
-            printf("Error linea %d: Caracter |%c| no valido. Despues de un ',' debe ir un valor.\n", line_number, value[i]);
+            fprintf(stderr, "Error linea %d: Caracter |%c| no valido. Despues de un ',' debe ir un valor.\n", line_number, value[i]);
             return ;
         }    
         if ((!isdigit(value[i]) && value[i] != '+' && value[i] != '-' && value[i] != ',') || (value[i] == ',' && value[i + 1] && value[i + 1] == ','))
         {
-            printf("Error linea %d: Caracter |%c| no valido. Los exitcodes no siguen esta sintaxis {1,127,2}.\n", line_number, value[i]);
+            fprintf(stderr, "Error linea %d: Caracter |%c| no valido. Los exitcodes no siguen esta sintaxis {1,127,2}.\n", line_number, value[i]);
             return ;
         }
         if (value[i] == ',' && value[i + 1] && (isdigit(value[i + 1]) || value[i + 1] == '-' || value[i + 1] == '+'))
@@ -490,7 +484,7 @@ void validate_exitcodes(char *value, struct task_t *task, unsigned int line_numb
         long num = strtol(s, &endptr, 10);
         if (*endptr != '\0' || num < INT_MIN || num > INT_MAX) 
         {
-            printf("Error línea %d: |%s| no es un exitcode válido.\n", line_number, s);
+            fprintf(stderr, "Error línea %d: |%s| no es un exitcode válido.\n", line_number, s);
             free(s);
             if (task->parser.exitcodes)
                 task->parser.exitcodes = NULL;
