@@ -82,8 +82,6 @@ int main(int argc, char **argv)
             printf("ENV: [%s]\n", current->parser.env[i]);
         current = FT_LIST_GET_NEXT(&tasks, current);
     }*/
-    create_config_file("nada", tasks);
-
     /*FT_LIST_ADD_LAST(&tasks, m_tasks1);
     FT_LIST_ADD_LAST(&tasks, m_tasks2);
     FT_LIST_ADD_LAST(&tasks, m_tasks3);

@@ -91,16 +91,16 @@ void fill_fields(char *name, char *value, struct task_t *task, unsigned int line
 
 void check_config_values(char *line, struct task_t *task, unsigned int line_number)
 {
-    //printf("N: %d\n", line_number);
     char *name = ft_substr(line, 0, strchr(line, ':') - line);
     char *tmp_value = ft_substr(line, strchr(line, ':') - line, strlen(line) - (size_t)(strchr(line, ':') - line));
     char *tmp_value_cp = tmp_value;
     if (strcmp(name, "env") == 0)
     {
         env_active = 1;
+        free(name);
+        free(tmp_value);
         return ;
     } 
-    //char *tmp_value = ft_substr(line, (unsigned int)(strchr(line, ':') - line), (unsigned int)strlen(line) - (unsigned int)(strchr(line, ':') - line));
     if (tmp_value && tmp_value[0] == ':' && tmp_value[1])
         ++tmp_value_cp;
     else if (strcmp(name, "env") != 0)
@@ -135,7 +135,7 @@ char *rm_space(char *s)
         j--;
     if (j == 0)
         j = strlen(s) - 1;
-    res = ft_substr(s, i, j - i + 1);
+    res = ft_substr(s, i, j - i + 1);\
     return (res);
 }
 
@@ -176,19 +176,19 @@ task_t* parse_config(char *file_path)
         {
             if (current_task)
                 env_active = 0;
-            trimmed_line++; //aqui antes estaba asi *trimedline++;
+            trimmed_line++;
             trimmed_line[j - 1] = '\0';
-            trimmed_line = rm_space(trimmed_line);
-            current_task = new_task(trimmed_line);
+            char *new_trimmed_line = rm_space(trimmed_line);
+            current_task = new_task(new_trimmed_line);
             if (!current_task)
             {
-                //fprintf(stderr, "FALLA MALLOC\n");
                 fclose(file);
-                //free_tasks(tasks); NO BORRAR, DESCOMENTAR CUANDO SE PASE A LIMPIO 
                 free(line);
+                free(new_trimmed_line);
                 return (NULL);
             }
             FT_LIST_ADD_LAST(&tasks, current_task);
+            free(new_trimmed_line);
         }
         else if (current_task && strchr(trimmed_line, ':'))
         {
@@ -210,7 +210,7 @@ task_t* parse_config(char *file_path)
 
 task_t *new_task(char *name_service)
 {
-    task_t *task = (task_t*)malloc(sizeof(task_t));
+    task_t *task = NEW(task_t, 1);
     task->parser.name = strdup(name_service);
     task->parser.cmd = NULL;
     task->parser.args = NULL;
@@ -225,9 +225,11 @@ task_t *new_task(char *name_service)
     task->parser.exitcodes = NULL;
     task->parser.stopsignal = 0;
     task->parser.stoptimeout = 0;
-    task->parser.umask = 0;
+    task->parser.umask = NULL;
     task->parser.procs = 0;
     task->parser.env = NULL;
+
+    //task->intern.state = STOPPED;
     return task;
 }
 
@@ -330,12 +332,16 @@ void validate_envs(char *line, struct task_t *task, unsigned int line_number)
     if (!line || line[0] == '\0')
     {
         fprintf(stderr, "Error linea %d: Debes introducir valores despues del '-'.\n", line_number);
+        if (line)
+          free(line);  
+        return ;
     }
     while (line[i])
     {
         if (isspace(line[i]))
         {
             fprintf(stderr, "Error linea %d: Hay espacios no validos.\n", line_number);
+            free(line);
             return ;
         }
         if (line[i] == '=')
@@ -343,6 +349,7 @@ void validate_envs(char *line, struct task_t *task, unsigned int line_number)
         if (j > 1)
         {
             fprintf(stderr, "Error linea %d: Hay mas de un '='.\n", line_number);
+            free(line);
             return ;
         }
         i++;
@@ -353,12 +360,14 @@ void validate_envs(char *line, struct task_t *task, unsigned int line_number)
     if (line[i] != '=')
     {
         fprintf(stderr, "Error linea %d: Debes incluir '=' para asignar valor a la env.\n", line_number);
+        free(line);
         return ;
     }
     j = strlen(line);
     if (j == i + 1)
     {
         fprintf(stderr, "Error linea %d: Debes introducir un valor despues de '='.\n", line_number);
+        free(line);
         return ;
     }
     allocate_envs(task);
@@ -382,10 +391,7 @@ int validate_cmd(char *value, struct task_t *task, unsigned int line_number)
         return (fprintf(stderr, "Error linea %u: El comando debe contener 2 comillas dobles\n", line_number));
     res = ft_substr(value, 1, strlen(value) - 2); //el startt 1 y len -2 es para qu itar las comillas dobles
     if (strlen(res) == 0)
-    {
         fprintf(stderr, "Error linea %d: Comillas dobles vacias\n", line_number);
-        free(res);
-    }
     else
     {
         i = 0;
@@ -393,8 +399,8 @@ int validate_cmd(char *value, struct task_t *task, unsigned int line_number)
             i++;
         task->parser.cmd = ft_substr(res, 0, i);
         task->parser.args = ft_split(res);
-        free(res);
     }
+    free(res);
     return (0);
 }
 
@@ -440,6 +446,15 @@ int validate_str(char *value, struct task_t *task, unsigned int line_number, int
     return (0);
 }
 
+void fill_pos0(struct task_t *task)
+{
+    if (task->parser.exitcodes)
+        free(task->parser.exitcodes);
+    task->parser.exitcodes = (int *)malloc(1 * sizeof(int));
+    task->parser.exitcodes[0] = 0;
+    return ;
+}
+
 void validate_exitcodes(char *value, struct task_t *task, unsigned int line_number)
 {
     char *s;
@@ -450,7 +465,7 @@ void validate_exitcodes(char *value, struct task_t *task, unsigned int line_numb
     if (value[0] != '{' && value[i] != '}')
     {
         fprintf(stderr, "Error linea %d: Los exitcodes deben estar entre {}.\n", line_number);
-        return ;
+        return fill_pos0(task);
     }
     value[i] = '\0';
     i = 1;
@@ -459,12 +474,12 @@ void validate_exitcodes(char *value, struct task_t *task, unsigned int line_numb
         if (value[i] == ',' && value[i + 1] == '\0')
         {
             fprintf(stderr, "Error linea %d: Caracter |%c| no valido. Despues de un ',' debe ir un valor.\n", line_number, value[i]);
-            return ;
+            return fill_pos0(task);
         }    
         if ((!isdigit(value[i]) && value[i] != '+' && value[i] != '-' && value[i] != ',') || (value[i] == ',' && value[i + 1] && value[i + 1] == ','))
         {
             fprintf(stderr, "Error linea %d: Caracter |%c| no valido. Los exitcodes no siguen esta sintaxis {1,127,2}.\n", line_number, value[i]);
-            return ;
+            return fill_pos0(task);
         }
         if (value[i] == ',' && value[i + 1] && (isdigit(value[i + 1]) || value[i + 1] == '-' || value[i + 1] == '+'))
             j++;
@@ -486,9 +501,7 @@ void validate_exitcodes(char *value, struct task_t *task, unsigned int line_numb
         {
             fprintf(stderr, "Error línea %d: |%s| no es un exitcode válido.\n", line_number, s);
             free(s);
-            if (task->parser.exitcodes)
-                task->parser.exitcodes = NULL;
-            return;
+            return fill_pos0(task);
         }
         free(s);
         task->parser.exitcodes[j + 1] = (int)num;
