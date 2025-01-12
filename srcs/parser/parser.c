@@ -123,7 +123,7 @@ void check_config_values(char *line, struct task_t *task, unsigned int line_numb
         free(name);
 }
 
-char *rm_space(char *s)
+char *rm_space(char *s, int line_number)
 {
     char *res;
     int i = 0;
@@ -135,10 +135,36 @@ char *rm_space(char *s)
         j--;
     if (j == 0)
         j = strlen(s) - 1;
-    res = ft_substr(s, i, j - i + 1);\
+    res = ft_substr(s, i, j - i + 1);
+    i = 0;
+    while (res[i])
+    {
+        if (isspace(res[i]))
+        {
+            fprintf(stderr, "Error linea %d: El nombre del servicio no puede contener espacios.\n", line_number);
+            free(res);
+            return (NULL);
+        }
+        i++;
+    }
     return (res);
 }
 
+
+void check_exitcodes(struct task_t *task)
+{
+    task_t *current = task;
+
+    while (current)
+    {
+        if (!task->parser.exitcodes)
+        {
+            task->parser.exitcodes = (int *)malloc(2 * sizeof(int));
+            task->parser.exitcodes[0] = 0;
+        }
+        current = FT_LIST_GET_NEXT(&task, current);
+    }
+}
 
 task_t* parse_config(char *file_path)
 {
@@ -172,13 +198,15 @@ task_t* parse_config(char *file_path)
             validate_envs(ft_strtrim(++trimmed_line, " \t\v"), current_task, line_number);
             continue ;
         }
-        if (trimmed_line[0] == '[' && trimmed_line[1] && trimmed_line[j] == ']')
+        if (trimmed_line[0] == '[' && trimmed_line[1] && trimmed_line[1] != ']' && trimmed_line[j] == ']')
         {
             if (current_task)
                 env_active = 0;
             trimmed_line++;
             trimmed_line[j - 1] = '\0';
-            char *new_trimmed_line = rm_space(trimmed_line);
+            char *new_trimmed_line = rm_space(trimmed_line, line_number);
+            if (!new_trimmed_line)
+                continue ;
             current_task = new_task(new_trimmed_line);
             if (!current_task)
             {
@@ -199,11 +227,12 @@ task_t* parse_config(char *file_path)
         }
         else
         {
-            fprintf(stderr, "Error linea %d: El valor introducido %s no es valido.\n", line_number, line);
+            fprintf(stderr, "Error linea %d: El valor introducido |%s| no es valido.\n", line_number, line);
         }
     }
     free(line);
     fclose(file);
+    check_exitcodes(tasks);
     create_config_file("nada", tasks); //cambiar nombre del fichero al bueno
     return (tasks);
 }
@@ -450,7 +479,7 @@ void fill_pos0(struct task_t *task)
 {
     if (task->parser.exitcodes)
         free(task->parser.exitcodes);
-    task->parser.exitcodes = (int *)malloc(1 * sizeof(int));
+    task->parser.exitcodes = (int *)malloc(2 * sizeof(int));
     task->parser.exitcodes[0] = 0;
     return ;
 }
