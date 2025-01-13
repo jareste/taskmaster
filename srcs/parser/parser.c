@@ -137,11 +137,18 @@ char *rm_space(char *s, int line_number)
         j = strlen(s) - 1;
     res = ft_substr(s, i, j - i + 1);
     i = 0;
+    printf("res:|%s|\n", res);
     while (res[i])
     {
         if (isspace(res[i]))
         {
             fprintf(stderr, "Error linea %d: El nombre del servicio no puede contener espacios.\n", line_number);
+            free(res);
+            return (NULL);
+        }
+        if (res[i] == '[' || res[i] == ']')
+        {
+            fprintf(stderr, "Error linea %d: El nombre del servicio contiene el caracter invalido %c.\n", line_number, res[i]);
             free(res);
             return (NULL);
         }
@@ -324,15 +331,50 @@ bool validate_ints(char *value, struct task_t *task, int identify, unsigned int 
             return false;
         }
         if (identify == 1)
+        {
+            if (task->parser.procs != 0)
+            {
+                fprintf(stderr, "Error linea %d: Parametro repetido.\n", line_number);
+                return false;
+            }
             task->parser.procs = (int)result;
+        }
         else if (identify == 2)
+        {
+            if (task->parser.startretries != 0)
+            {
+                fprintf(stderr, "Error linea %d: Parametro repetido.\n", line_number);
+                return false;
+            }
             task->parser.startretries = (int)result;
+        }
         else if (identify == 3)
+        {
+            if (task->parser.starttime != 0)
+            {
+                fprintf(stderr, "Error linea %d: Parametro repetido.\n", line_number);
+                return false;
+            }
             task->parser.starttime = (int)result;
+        }
         else if (identify == 4)
+        {
+            if (task->parser.stoptime != 0)
+            {
+                fprintf(stderr, "Error linea %d: Parametro repetido.\n", line_number);
+                return false;
+            }
             task->parser.stoptime = (int)result;
+        }
         else if (identify == 5)
+        {
+            if (task->parser.stoptimeout != 0)
+            {
+                fprintf(stderr, "Error linea %d: Parametro repetido.\n", line_number);
+                return false;
+            }
             task->parser.stoptimeout = (int)result;
+        }
         return true;
     }
     return false;    
@@ -409,6 +451,11 @@ int validate_cmd(char *value, struct task_t *task, unsigned int line_number)
     int i = -1;
     int quotes = 0;
 
+    if (task->parser.cmd || task->parser.args)
+    {
+        fprintf(stderr, "Error linea %d: Parametro repetido.\n", line_number);
+        return (0);
+    }
     if (value[0] != '"' || value[strlen(value) - 1] != '"')
         return (fprintf(stderr, "Error linea %u: El comando debe estar escrito entre comillas dobles\n", line_number));
     while (value[++i])
@@ -459,19 +506,52 @@ int validate_str(char *value, struct task_t *task, unsigned int line_number, int
         i++;
     }
     if (identify == 1)
+    {
+        if (task->parser.umask != NULL)
+        {
+            fprintf(stderr, "Error linea %d: Parametro repetido.\n", line_number);
+            return (-1);
+        }
         task->parser.umask = strdup(value);
+    }
     else if (identify == 2)
+    {
+        if (task->parser.dir != NULL)
+        {
+            fprintf(stderr, "Error linea %d: Parametro repetido.\n", line_number);
+            return (-1);
+        }
         task->parser.dir = strdup(value);
+    }
     else if (identify == 3)
         validate_bool(value, task, line_number);
     else if (identify == 4)
+    {
+        if (task->parser.ar != ALWAYS)
+        {
+            fprintf(stderr, "Error linea %d: Parametro repetido.\n", line_number);
+            return (-1);
+        }
         task->parser.ar = parse_autorestart(value);
+    }
     else if (identify == 5)
+    {
+        if (task->parser.stdout != NULL)
+        {
+            fprintf(stderr, "Error linea %d: Parametro repetido.\n", line_number);
+            return (-1);
+        }
         task->parser.stdout = strdup(value);
+    }
     else if (identify == 6)
+    {
+        if (task->parser.stderr != NULL)
+        {
+            fprintf(stderr, "Error linea %d: Parametro repetido.\n", line_number);
+            return (-1);
+        }
         task->parser.stderr = strdup(value);
-    else if (identify == 7)
-        validate_exitcodes(value, task, line_number);
+    }
     return (0);
 }
 
@@ -491,6 +571,11 @@ void validate_exitcodes(char *value, struct task_t *task, unsigned int line_numb
     int k;
     int i = strlen(value) - 1;
     int count_exitcodes = 0;
+    if (task->parser.exitcodes != NULL)
+    {
+        fprintf(stderr, "Error linea %d: Parametro repetido.\n", line_number);
+        return ;
+    }
     if (value[0] != '{' && value[i] != '}')
     {
         fprintf(stderr, "Error linea %d: Los exitcodes deben estar entre {}.\n", line_number);
