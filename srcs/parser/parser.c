@@ -137,7 +137,6 @@ char *rm_space(char *s, int line_number)
         j = strlen(s) - 1;
     res = ft_substr(s, i, j - i + 1);
     i = 0;
-    printf("res:|%s|\n", res);
     while (res[i])
     {
         if (isspace(res[i]))
@@ -164,10 +163,10 @@ void check_exitcodes(struct task_t *task)
 
     while (current)
     {
-        if (!task->parser.exitcodes)
+        if (!current->parser.exitcodes)
         {
-            task->parser.exitcodes = (int *)malloc(2 * sizeof(int));
-            task->parser.exitcodes[0] = 0;
+            current->parser.exitcodes = (int *)malloc(2 * sizeof(int));
+            current->parser.exitcodes[0] = 0;
         }
         current = FT_LIST_GET_NEXT(&task, current);
     }
