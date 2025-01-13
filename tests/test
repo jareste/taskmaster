@@ -1,5 +1,5 @@
 [nginx]
-		cmd: "/usr/local/bin/nginx -c /etc/nginx/test.conf"
+		cmd: "/bin/ls -l -a"
 		numprocs: 1
 		umask:       	 022     
 		workingdir: /tmp

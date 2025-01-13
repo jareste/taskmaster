@@ -1,0 +1,16 @@
+[nginx]
+cmd: "/bi""n/ls -l -a"
+[hola]
+cmd mal
+[buenas]
+cmd:: "mal"
+[que]
+cmd: novaentrecomillas
+[para]
+cmd: novaen  trec omi llas
+[xd]
+cmd: m" a"al
+[mal]
+cmd: ""
+[ss]
+cmd: "a"aaa"

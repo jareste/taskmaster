@@ -5,9 +5,6 @@
 		workingdir: /tmp
 		autostart: true
 		autorestart: unexpected
-		exitcodes:
-		- 0
-		- 2
 		startretries: 3
 		starttime: 5
 		stopsignal: TERM
@@ -17,6 +14,7 @@
 		env:
 		STARTED_BY: taskmaster
 		ANSWER: 42
+		exitcodes: {0}
 [vogsphere]           
 		cmd: "/usr/local/bin/vogsphere-worker --no-prefork"
 		numprocs: 8

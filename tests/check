@@ -1,0 +1,9 @@
+[nginx]
+cmd: "/bin/ls -l -a"
+numprocs: 1
+exitcodes: {}
+
+[buenas]
+cmd: "/bin/ls"
+stderr: /tmp/nginx.stderr
+stdout: /tmp/nginx.stdout

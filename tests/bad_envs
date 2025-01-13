@@ -1,0 +1,28 @@
+[estasmal]
+env:
+-
+-H======================
+-H=================nada
+-H
+-Test=
+- Test = nada
+-test = nada
+-test= nada
+-test =nada
+
+exitcodes: {1,3}
+cmd: "/nada"
+stderr: /tmp/nginx.stderr
+stdout: /tmp/nginx.stdout
+
+[estassi]
+env:
+-NADA=$nada
+- QUE=aaa
+--NADA=si
+-SI=si
+
+exitcodes: {1,3}
+cmd: "/nada"
+stderr: /tmp/nada
+stdout: /buenas
