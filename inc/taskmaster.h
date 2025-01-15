@@ -5,6 +5,11 @@
 #include <pthread.h>
 #include <sys/types.h>
 
+#define write(x,y,z) do{ \
+    int foo = write(x,y,z); \
+    (void) foo; \
+} while (0)
+
 typedef enum
 {
     false,

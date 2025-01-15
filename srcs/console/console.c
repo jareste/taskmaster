@@ -98,8 +98,9 @@ void* interactive_console(void* param)
     int* pipefd = (int*)param;
     char input[256];
 
-    fprintf(stdout, "Interactive Console. Type 'help' for a list of commands.\n");
-    fflush(stdout);
+    // fprintf(stdout, "Interactive Console. Type 'help' for a list of commands.\n");
+    write(1, "Interactive Console. Type 'help' for a list of commands.\n", strlen("Interactive Console. Type 'help' for a list of commands.\n"));
+    // fflush(stdout);
 
     while (exit_flag == false)
     {
@@ -124,7 +125,8 @@ void* interactive_console(void* param)
         if (FD_ISSET(pipefd[0], &readfds))
         {
             char buf[4];
-            read(pipefd[0], buf, 4);
+            int foo = read(pipefd[0], buf, 4);
+            (void) foo;
             break;
         }
         /* Propper threat cancelation ZzzzZZZzzz */
