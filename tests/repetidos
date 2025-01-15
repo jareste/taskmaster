@@ -1,0 +1,36 @@
+[vogsphere]
+		cmd: "/usr/local/bin/vogsphere-worker --no-prefork"
+		numprocs: 8
+		umask: 077
+		workingdir: /tmp
+		autostart: true
+		autorestart: unexpected
+        env:
+		-NADA=gemartin
+		-Buennas=queee
+		startretries: 3
+		starttime: 5
+		stopsignal: USR1
+		stoptime: 10
+		stdout: /tmp/vgsworker.stdout
+		stderr: /tmp/vgsworker.stderr
+		cmd: "/usr/local/bin/takkk --no-prefork"
+		numprocs: 4
+		umask: 072
+		workingdir: /tmp/aaa
+		autostart: false
+		autorestart: unexpected
+		exitcodes: {0,5,120,3,150,111,02}
+		startretries: 4
+		starttime: 6
+		stopsignal: KILL
+        env:
+		-HOLa=gemartin
+		-aaa=queee
+        umask: 072
+        umask: 072
+        umask: 090
+        umask: 080
+        umask: 010
+        exitcodes: {10,11,15}
+        nada

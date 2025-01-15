@@ -3,7 +3,7 @@
 
 #include <ft_list.h>
 #include <pthread.h>
-#include <sys/types.h>
+// #include <sys/types.h>
 
 #define write(x,y,z) do{ \
     int foo = write(x,y,z); \
@@ -69,7 +69,7 @@ typedef struct
     char log[1024];
 } log_t;
 
-typedef struct
+typedef struct 
 {
     char*       name; /* it's name */
     char*       cmd; /* cmd to launch */
@@ -80,6 +80,7 @@ typedef struct
     char*       stderr; /* wher the stderr should be written */
     bool        append_out; /* append outputs or just create new ones? */
     char*       dtach; /* run with dtach (this overwrites stdout and stderr) */
+    char*       umask; /* umask of the process */
     bool        autostart; /* autostart or wait CLI order? */
     AR_modes    ar; /* when to autorestart */
     int         startretries; /* if it fails to start how many times should we try? */
@@ -88,7 +89,7 @@ typedef struct
     int*        exitcodes; /* valid exit codes of the process, any other must be informed */
     int         stopsignal; /* signal to stop the process */
     int         stoptimeout; /* when to stop it? */
-    int         umask; /* umask of the process */
+    int         procs;
 } parser_t;
 
 typedef struct
@@ -103,8 +104,7 @@ typedef struct
     cmd_request cmd_request; /* what to do with this task */
 } intern_t;
 
-typedef struct
-{
+typedef struct task_t {
     list_item_t l;
 
     parser_t    parser; /* parser info */
@@ -135,5 +135,16 @@ char* get_autorestart_str(AR_modes ar);
 AR_modes parse_autorestart(char* str);
 
 void modify_task_param(void* param, void* new_value, task_param type, bool should_free);
+
+struct task_t* parse_config(char *file_path);
+int validate_cmd(char *value, struct task_t *task, unsigned int line_number);
+bool validate_ints(char *value, struct task_t *task, int identify, unsigned int line_number);
+char	*ft_substr(char *s, unsigned int start, size_t len);
+char *ft_strtrim(char *s1, char *set);
+task_t *new_task(char *name_service);
+int validate_str(char *value, struct task_t *task, unsigned int line_number, int identify);
+void validate_exitcodes(char *value, struct task_t *task, unsigned int line_number);
+void validate_envs(char *line, struct task_t *task, unsigned int line_number);
+void create_config_file(char *file_name, struct task_t *tasks);
 
 #endif /* TASKMASTER_H */

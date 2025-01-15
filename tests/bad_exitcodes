@@ -1,0 +1,12 @@
+[nginx]
+exitcodes: {,}
+[nada]
+exitcodes: {1191191919919191919919191}
+[mas]
+exitcodes: {1,{2},3}
+[ua]
+exitcodes: {1,2,3,4,}
+[brr]
+exitcodes: {1, 2, 3}
+[xd]
+exitcodes: {1,2,3,4,5,99999999999999999999999999999999}

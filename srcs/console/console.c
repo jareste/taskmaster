@@ -540,7 +540,7 @@ void print_task(task_t* task)
     fprintf(stdout, "%-*s %d\n", field_width, "Stoptimeout:", task->parser.stoptimeout);
     fprintf(stdout, "%-*s %s\n", field_width, "Stdout:", task->parser.stdout);
     fprintf(stdout, "%-*s %s\n", field_width, "Stderr:", task->parser.stderr);
-    fprintf(stdout, "%-*s %d\n", field_width, "Umask:", task->parser.umask);
+    fprintf(stdout, "%-*s %s\n", field_width, "Umask:", task->parser.umask);
 }
 
 void cmd_show_task(void* task)
