@@ -429,7 +429,7 @@ int validate_cmd(char *value, struct task_t *task, unsigned int line_number)
     if (value[0] != '"' || value[strlen(value) - 1] != '"')
     {
         fprintf(stderr, "Taskmaster: Error line %d: Command must be between double quotes.\n", line_number);
-        return ;
+        return (0);
     }
     while (value[++i])
     {
@@ -439,7 +439,7 @@ int validate_cmd(char *value, struct task_t *task, unsigned int line_number)
     if (quotes != 2)
     {
         fprintf(stderr, "Taskmaster: Error line %d: Command must be between double quotes.\n", line_number);
-        return ;
+        return (0);
     }
     res = ft_substr(value, 1, strlen(value) - 2); //el startt 1 y len -2 es para qu itar las comillas dobles
     if (strlen(res) == 0)
