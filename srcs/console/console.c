@@ -291,15 +291,25 @@ void cmd_delete(void* param)
 void cmd_update(void* param)
 {
     /* TODO */
-    (void)param;
-    // if (update_configuration() == 0)
-    // {
-    //     printf("Configuration updated.\n");
-    // }
-    // else
-    // {
-    //     printf("Failed to update configuration.\n");
-    // }
+    char* file_path = (char*)param;
+    if (file_path == NULL)
+    {
+        fprintf(stdout, "Usage: update <file_path>\n");
+        return;
+    }
+    fprintf(stdout, "Updating configuration from file: %s\n", file_path);
+    task_t* tasks = parse_config(file_path);
+    if (tasks)
+    {
+        /*need to delete previous ones.*/
+        request_delete_all_tasks();
+        fprintf(stdout, "Configuration updated successfully.\n");
+        set_active_tasks(tasks);
+    }
+    else
+    {
+        fprintf(stdout, "Failed to update configuration.\n");
+    }
 }
 
 void cmd_kms(void* param)

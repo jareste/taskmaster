@@ -15,6 +15,7 @@
 #define DTACH_PATH "/home/jareste-/goinfre/dtach/dtach"
 #endif
 
+static bool reset = false;
 static bool die = false;
 pthread_mutex_t g_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -566,17 +567,21 @@ void add_task_to_list(task_t* task)
 static void cleanup(task_t* tasks, bool kill_all)
 {
     task_t* task = tasks;
+    bool die = kill_all;
     while (task)
     {
         if (task->intern.state == RUNNING && kill_all == true)
         {
             printf("Stopping task2222 %s\n", task->parser.name);
             kill(task->intern.pid, task->parser.stopsignal);
+            die = false;
         }
         delete_logs(task);
-        delete_task(&task, kill_all);
+        delete_task(&task, die);
+        die = kill_all;
         task = get_active_tasks();
     }
+    set_active_tasks(NULL);
 }
 
 void update_task_state(task_t* task, task_state state)
@@ -619,6 +624,14 @@ int cmd_requested_action_on_task(task_t** task)
     return ret;
 }
 
+void request_delete_all_tasks()
+{
+    reset = true;
+    while (reset == true)
+    {
+        usleep(200000);
+    }
+}
 
 int supervisor(task_t* tasks)
 {
@@ -638,6 +651,14 @@ int supervisor(task_t* tasks)
             usleep(200000);
         }
         check_if_start(task);
+
+        if (reset == true)
+        {
+            cleanup(tasks, true);
+            task = get_active_tasks();
+            reset = false;
+            continue;
+        }
 
         /*
          * check if CLI requested any action on this task

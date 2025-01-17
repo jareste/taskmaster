@@ -145,5 +145,6 @@ int validate_str(char *value, struct task_t *task, unsigned int line_number, int
 void validate_exitcodes(char *value, struct task_t *task, unsigned int line_number);
 void validate_envs(char *line, struct task_t *task, unsigned int line_number);
 void create_config_file(char *file_name, struct task_t *tasks);
+void request_delete_all_tasks();
 
 #endif /* TASKMASTER_H */
