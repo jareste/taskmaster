@@ -51,8 +51,8 @@ int parse_stopsignal(const char *str, int line_number)
     else if (strcasecmp(str, "SIGTSTP") == 0 || strcasecmp(str, "TSTP") == 0) return SIGTSTP;
     else if (strcasecmp(str, "SIGTTIN") == 0 || strcasecmp(str, "TTIN") == 0) return SIGTTIN;
     else if (strcasecmp(str, "SIGTTOU") == 0 || strcasecmp(str, "TTOU") == 0) return SIGTTOU;
-    else fprintf(stderr, "Error linea %d: Introduce una señal valida.\n", line_number);
-    return 0; // valor si no encuentra la señal
+    else fprintf(stderr, "Taskmaster: Error line %d: Invalid signal.\n", line_number);
+    return 0;
 }
 
 void fill_fields(char *name, char *value, task_t *task, unsigned int line_number)
@@ -86,7 +86,7 @@ void fill_fields(char *name, char *value, task_t *task, unsigned int line_number
     else if (strcmp("stderr", name) == 0)
         validate_str(value, task, line_number, 6);
     else
-        fprintf(stderr, "Error linea %d: El campo introducido %s no es valido.\n", line_number, name);//esto deberia ir en los logs
+        fprintf(stderr, "Taskmaster: Error line %d: '%s' is not a valid parameter.\n", line_number, name);
 }
 
 void check_config_values(char *line, struct task_t *task, unsigned int line_number)
@@ -107,14 +107,14 @@ void check_config_values(char *line, struct task_t *task, unsigned int line_numb
     {
         free(tmp_value);
         free(name);
-        fprintf(stderr, "Error linea %d: Despues de ':' debes introducir un valor.\n", line_number);
+        fprintf(stderr, "Taskmaster: Error line %d: Empty value.\n", line_number);
         return ;
     }
     char *value = ft_strtrim(tmp_value_cp, " \t\n\r\v\f");
     if (strlen(value) != 0)
         fill_fields(name, value, task, line_number);
     else
-        fprintf(stderr, "Error linea %d: Despues de ':' debes introducir un valor.\n", line_number);
+        fprintf(stderr, "Taskmaster: Error line %d: Empty value.\n", line_number);
     if (tmp_value)
         free(tmp_value);
     if (value)
@@ -141,13 +141,13 @@ char *rm_space(char *s, int line_number)
     {
         if (isspace(res[i]))
         {
-            fprintf(stderr, "Error linea %d: El nombre del servicio no puede contener espacios.\n", line_number);
+            fprintf(stderr, "Taskmaster: Error line %d: '%s' is not a valid service name.\n", line_number, s);
             free(res);
             return (NULL);
         }
         if (res[i] == '[' || res[i] == ']')
         {
-            fprintf(stderr, "Error linea %d: El nombre del servicio contiene el caracter invalido %c.\n", line_number, res[i]);
+            fprintf(stderr, "Taskmaster: Error line %d: '%s' is not a valid service name.\n", line_number, s);
             free(res);
             return (NULL);
         }
@@ -217,7 +217,7 @@ task_t* parse_config(char *file_path)
         }
         else
         {
-            fprintf(stderr, "Error linea %d: El valor introducido |%s| no es valido.\n", line_number, line);
+            fprintf(stderr, "Taskmaster: Error line: %d: '%s' is not a valid parameter.\n", line_number, line);
         }
     }
     free(line);
@@ -280,7 +280,7 @@ bool is_numeric(char *str, int line_number)
     {
         if (!isdigit(*str))
         {
-            fprintf(stderr, "Error linea %d: Caracter no numerico.\n", line_number);
+            fprintf(stderr, "Taskmaster: Error line %d: '%s' is not a number.\n", line_number, str);
             return false;
         }
         ++str;
@@ -297,14 +297,14 @@ bool validate_ints(char *value, struct task_t *task, int identify, unsigned int 
 
         if (errno == ERANGE || result > INT_MAX || result < INT_MIN)
         {
-            fprintf(stderr, "Error linea %d: El número proporcionado está fuera del rango de int.\n", line_number);
+            fprintf(stderr, "Taskmaster: Error line %d: out of range.\n", line_number);
             return false;
         }
         if (identify == 1)
         {
             if (task->parser.procs != 0)
             {
-                fprintf(stderr, "Error linea %d: Parametro repetido.\n", line_number);
+                fprintf(stderr, "Taskmaster: Error line %d: repeated parameter.\n", line_number);
                 return false;
             }
             task->parser.procs = (int)result;
@@ -313,7 +313,7 @@ bool validate_ints(char *value, struct task_t *task, int identify, unsigned int 
         {
             if (task->parser.startretries != 0)
             {
-                fprintf(stderr, "Error linea %d: Parametro repetido.\n", line_number);
+                fprintf(stderr, "Taskmaster: Error line %d: repeated parameter.\n", line_number);
                 return false;
             }
             task->parser.startretries = (int)result;
@@ -322,7 +322,7 @@ bool validate_ints(char *value, struct task_t *task, int identify, unsigned int 
         {
             if (task->parser.starttime != 0)
             {
-                fprintf(stderr, "Error linea %d: Parametro repetido.\n", line_number);
+                fprintf(stderr, "Taskmaster: Error line %d: repeated parameter.\n", line_number);
                 return false;
             }
             task->parser.starttime = (int)result;
@@ -331,7 +331,7 @@ bool validate_ints(char *value, struct task_t *task, int identify, unsigned int 
         {
             if (task->parser.stoptime != 0)
             {
-                fprintf(stderr, "Error linea %d: Parametro repetido.\n", line_number);
+                fprintf(stderr, "Taskmaster: Error line %d: repeated parameter.\n", line_number);
                 return false;
             }
             task->parser.stoptime = (int)result;
@@ -340,7 +340,7 @@ bool validate_ints(char *value, struct task_t *task, int identify, unsigned int 
         {
             if (task->parser.stoptimeout != 0)
             {
-                fprintf(stderr, "Error linea %d: Parametro repetido.\n", line_number);
+                fprintf(stderr, "Taskmaster: Error line %d: repeated parameter.\n", line_number);
                 return false;
             }
             task->parser.stoptimeout = (int)result;
@@ -372,7 +372,7 @@ void validate_envs(char *line, struct task_t *task, unsigned int line_number)
 
     if (!line || line[0] == '\0')
     {
-        fprintf(stderr, "Error linea %d: Debes introducir valores despues del '-'.\n", line_number);
+        fprintf(stderr, "Taskmaster: Error line %d: empty string\n", line_number);
         if (line)
           free(line);  
         return ;
@@ -381,7 +381,7 @@ void validate_envs(char *line, struct task_t *task, unsigned int line_number)
     {
         if (isspace(line[i]))
         {
-            fprintf(stderr, "Error linea %d: Hay espacios no validos.\n", line_number);
+            fprintf(stderr, "Taskmaster: Error line %d: non valid spaces\n", line_number);
             free(line);
             return ;
         }
@@ -389,7 +389,7 @@ void validate_envs(char *line, struct task_t *task, unsigned int line_number)
             j++;
         if (j > 1)
         {
-            fprintf(stderr, "Error linea %d: Hay mas de un '='.\n", line_number);
+            fprintf(stderr, "Taskmaster: Error line %d: multiple '='.\n", line_number);
             free(line);
             return ;
         }
@@ -400,14 +400,14 @@ void validate_envs(char *line, struct task_t *task, unsigned int line_number)
         i++;
     if (line[i] != '=')
     {
-        fprintf(stderr, "Error linea %d: Debes incluir '=' para asignar valor a la env.\n", line_number);
+        fprintf(stderr, "Taskmaster: Error line %d: no '='.\n", line_number);
         free(line);
         return ;
     }
     j = strlen(line);
     if (j == i + 1)
     {
-        fprintf(stderr, "Error linea %d: Debes introducir un valor despues de '='.\n", line_number);
+        fprintf(stderr, "Taskmaster: Error line %d: no value after '='.\n", line_number);
         free(line);
         return ;
     }
@@ -423,21 +423,27 @@ int validate_cmd(char *value, struct task_t *task, unsigned int line_number)
 
     if (task->parser.cmd || task->parser.args)
     {
-        fprintf(stderr, "Error linea %d: Parametro repetido.\n", line_number);
+        fprintf(stderr, "Taskmaster: Error line %d: repeated parameter.\n", line_number);
         return (0);
     }
     if (value[0] != '"' || value[strlen(value) - 1] != '"')
-        return (fprintf(stderr, "Error linea %u: El comando debe estar escrito entre comillas dobles\n", line_number));
+    {
+        fprintf(stderr, "Taskmaster: Error line %d: Command must be between double quotes.\n", line_number);
+        return ;
+    }
     while (value[++i])
     {
         if (value[i] == '"')
             quotes++;
     }
     if (quotes != 2)
-        return (fprintf(stderr, "Error linea %u: El comando debe contener 2 comillas dobles\n", line_number));
+    {
+        fprintf(stderr, "Taskmaster: Error line %d: Command must be between double quotes.\n", line_number);
+        return ;
+    }
     res = ft_substr(value, 1, strlen(value) - 2); //el startt 1 y len -2 es para qu itar las comillas dobles
     if (strlen(res) == 0)
-        fprintf(stderr, "Error linea %d: Comillas dobles vacias\n", line_number);
+        fprintf(stderr, "Taskmaster: Error line %d: empty string\n", line_number);
     else
     {
         i = 0;
@@ -458,7 +464,7 @@ void validate_bool(char *value, struct task_t *task, unsigned int line_number)
         task->parser.autostart = false;
     else
     {
-        fprintf(stderr, "Error linea %d: Autostart solo acepta valores true/false.\n", line_number);
+        fprintf(stderr, "Taskmaster: Error line %d: Autostart only accepts true/false values.\n", line_number);
     }
 }
 
@@ -470,7 +476,7 @@ int validate_str(char *value, struct task_t *task, unsigned int line_number, int
     {
         if (isspace(value[i]))
         {
-            fprintf(stderr, "Error linea %d: Solo se espera un argumento.\n", line_number);
+            fprintf(stderr, "Taskmaster: Error line %d: expecting only one parameter.\n", line_number);
             return (-1);
         }
         i++;
@@ -479,7 +485,7 @@ int validate_str(char *value, struct task_t *task, unsigned int line_number, int
     {
         if (task->parser.umask != NULL)
         {
-            fprintf(stderr, "Error linea %d: Parametro repetido.\n", line_number);
+            fprintf(stderr, "Taskmaster: Error line %d: repeated parameter.\n", line_number);
             return (-1);
         }
         task->parser.umask = strdup(value);
@@ -488,7 +494,7 @@ int validate_str(char *value, struct task_t *task, unsigned int line_number, int
     {
         if (task->parser.dir != NULL)
         {
-            fprintf(stderr, "Error linea %d: Parametro repetido.\n", line_number);
+            fprintf(stderr, "Taskmaster: Error line %d: repeated parameter.\n", line_number);
             return (-1);
         }
         task->parser.dir = strdup(value);
@@ -499,7 +505,7 @@ int validate_str(char *value, struct task_t *task, unsigned int line_number, int
     {
         if (task->parser.ar != ALLWAYS)
         {
-            fprintf(stderr, "Error linea %d: Parametro repetido.\n", line_number);
+            fprintf(stderr, "Taskmaster: Error line %d: repeated parameter.\n", line_number);
             return (-1);
         }
         task->parser.ar = parse_autorestart(value);
@@ -508,7 +514,7 @@ int validate_str(char *value, struct task_t *task, unsigned int line_number, int
     {
         if (task->parser.stdout != NULL)
         {
-            fprintf(stderr, "Error linea %d: Parametro repetido.\n", line_number);
+            fprintf(stderr, "Taskmaster: Error line %d: repeated parameter.\n", line_number);
             return (-1);
         }
         task->parser.stdout = strdup(value);
@@ -517,7 +523,7 @@ int validate_str(char *value, struct task_t *task, unsigned int line_number, int
     {
         if (task->parser.stderr != NULL)
         {
-            fprintf(stderr, "Error linea %d: Parametro repetido.\n", line_number);
+            fprintf(stderr, "Taskmaster: Error line %d: repeated parameter.\n", line_number);
             return (-1);
         }
         task->parser.stderr = strdup(value);
@@ -534,12 +540,12 @@ void validate_exitcodes(char *value, task_t *task, unsigned int line_number)
     int count_exitcodes = 0;
     if (task->parser.exitcodes != NULL)
     {
-        fprintf(stderr, "Error linea %d: Parametro repetido.\n", line_number);
+        fprintf(stderr, "Taskmaster: Error line %d: repeated parameter.\n", line_number);
         return ;
     }
     if (value[0] != '{' && value[i] != '}')
     {
-        fprintf(stderr, "Error linea %d: Los exitcodes deben estar entre {}.\n", line_number);
+        fprintf(stderr, "Taskmaster: Error line %d: exitcodes must be between {}\n", line_number);
         return ;
     }
     value[i] = '\0';
@@ -548,12 +554,12 @@ void validate_exitcodes(char *value, task_t *task, unsigned int line_number)
     {   
         if (value[i] == ',' && value[i + 1] == '\0')
         {
-            fprintf(stderr, "Error linea %d: Caracter |%c| no valido. Despues de un ',' debe ir un valor.\n", line_number, value[i]);
+            fprintf(stderr, "Taskmaster: Error line %d: |%s| is not a valid exitcode. Syntax {1, 127, 2}.\n", line_number, value);
             return ;
         }    
         if ((!isdigit(value[i]) && value[i] != '+' && value[i] != '-' && value[i] != ',') || (value[i] == ',' && value[i + 1] && value[i + 1] == ','))
         {
-            fprintf(stderr, "Error linea %d: Caracter |%c| no valido. Los exitcodes no siguen esta sintaxis {1,127,2}.\n", line_number, value[i]);
+            fprintf(stderr, "Taskmaster: Error line %d: |%s| is not a valid exitcode. Syntax {1, 127, 2}.\n", line_number, value);
             return ;
         }
         if (value[i] == ',' && value[i + 1] && (isdigit(value[i + 1]) || value[i + 1] == '-' || value[i + 1] == '+'))
@@ -574,11 +580,10 @@ void validate_exitcodes(char *value, task_t *task, unsigned int line_number)
         long num = strtol(s, &endptr, 10);
         if (*endptr != '\0' || num < INT_MIN || num > INT_MAX) 
         {
-            fprintf(stderr, "Error línea %d: |%s| no es un exitcode válido.\n", line_number, s);
             free(s);
             free(task->parser.exitcodes);
             task->parser.exitcodes = NULL;
-            fprintf(stderr, "Error linea %d: Los exitcodes no siguen esta sintaxis {1,127,2}.\n", line_number);
+            fprintf(stderr, "Taskmaster: Error line %d: |%s| is not a valid exitcode. Syntax {1, 127, 2}.\n", line_number, s);
             return ;
         }
         free(s);
@@ -705,6 +710,9 @@ char	*ft_strtrim(char *s1, char *set)
 
 void create_config_file(char *file_name, struct task_t *tasks)
 {
+    task_t *current;
+    int i;
+    int len;
     const char *AR_modes_strings[] = {"ALLWAYS", "UNEXPECTED", "SUCCESS", "FAILURE", "NEVER"};
     const char *Signals_strings[] = {"", "SIGHUP", "SIGINT", "SIGQUIT", "SIGILL", "", "SIGABRT", \
     "", "SIGFPE", "SIGKILL", "SIGUSR1", "SIGSEGV", "SIGUSR2", "SIGPIPE", "SIGALRM", "SIGTERM", "", \
@@ -713,12 +721,12 @@ void create_config_file(char *file_name, struct task_t *tasks)
     FILE *file = fopen(file_name, "w");
     if (file == NULL)
     {
-        perror("Error al abrir el config file\n");
+        fprintf(stderr, "Taskmaster: Error opening file %s: %s\n", file_name, strerror(errno));
         return ;
     }
-    task_t *current = tasks;
-    int i = 0;
-    int len = 0;
+    current = tasks;
+    i = 0;
+    len = 0;
     while (current)
     {
         fprintf(file, "[%s]\n", current->parser.name);
