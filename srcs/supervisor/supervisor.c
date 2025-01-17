@@ -572,7 +572,6 @@ static void cleanup(task_t* tasks, bool kill_all)
     {
         if (task->intern.state == RUNNING && kill_all == true)
         {
-            printf("Stopping task2222 %s\n", task->parser.name);
             kill(task->intern.pid, task->parser.stopsignal);
             die = false;
         }
@@ -631,6 +630,7 @@ void request_delete_all_tasks()
     {
         usleep(200000);
     }
+    fprintf(stdout, "All tasks deleted continuing with supervisor.\n");
 }
 
 int supervisor(task_t* tasks)
@@ -657,6 +657,7 @@ int supervisor(task_t* tasks)
             cleanup(tasks, true);
             task = get_active_tasks();
             reset = false;
+            fprintf(stdout, "All tasks deleted.\n");
             continue;
         }
 
@@ -719,7 +720,13 @@ int supervisor(task_t* tasks)
                     {
                         update_task_state(task, FATAL);
                         push_log(task, "Task %s exited with unrecognized status %d. Marking it as FATAL.", task->parser.name, exit_status);
-                    }                
+                    }
+                    else if (task->parser.exitcodes == NULL)
+                    {
+                        update_task_state(task, EXITED);
+                        push_log(task, "Task %s exited with status %d", task->parser.name, exit_status);
+                        log_dtach_pipe(task);
+                    }
                 }
                 else if (WIFSIGNALED(status))
                 {

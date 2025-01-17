@@ -236,6 +236,7 @@ task_t *new_task(char *name_service)
     task->parser.stopsignal = 9;
 
     task->intern.state = STOPPED;
+    task->intern.pid = -1;
     return task;
 }
 
