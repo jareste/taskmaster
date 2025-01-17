@@ -45,8 +45,6 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    fprintf(stderr, "exit codes: %p\n", tasks->parser.exitcodes);
-
     /*task_t *current = tasks;
     while (current) 
     {

@@ -290,6 +290,7 @@ void cmd_delete(void* param)
 
 void cmd_update(void* param)
 {
+    /* TODO */
     (void)param;
     // if (update_configuration() == 0)
     // {

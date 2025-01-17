@@ -70,10 +70,7 @@ void fill_fields(char *name, char *value, task_t *task, unsigned int line_number
     else if (strcmp("autorestart", name) == 0)
         validate_str(value, task, line_number, 4);
     else if (strcmp("exitcodes", name) == 0)
-    {
         validate_exitcodes(value, task, line_number);
-        fprintf(stderr, "exitcodes: %p\n", task->parser.exitcodes);
-    }
     else if (strcmp("startretries", name) == 0)
         validate_ints(value, task, 2, line_number);
     else if (strcmp("starttime", name) == 0)
@@ -589,6 +586,14 @@ void validate_exitcodes(char *value, task_t *task, unsigned int line_number)
         j++;
         i = k + 1;
     }
+
+    if (count_exitcodes == 0)
+    {
+        free(task->parser.exitcodes);
+        task->parser.exitcodes = NULL;
+        return ;
+    }
+
     task->parser.exitcodes[0] = count_exitcodes;
 }
 
@@ -725,7 +730,6 @@ void create_config_file(char *file_name, struct task_t *tasks)
         i = 0;
         if (current->parser.exitcodes)
         {
-            fprintf(stderr, "existe exitcodes\n");
             len = current->parser.exitcodes[0];
             fprintf(file, " exitcodes: {");
             while (current->parser.exitcodes && ++i < len)
