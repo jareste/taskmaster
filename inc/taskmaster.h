@@ -40,7 +40,7 @@ typedef enum
 
 typedef enum
 {
-    ALWAYS,
+    ALLWAYS,
     UNEXPECTED,
     SUCCESS,
     FAILURE,

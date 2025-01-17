@@ -22,6 +22,7 @@ void cmd_delete(void* param);
 void cmd_show_task(void* task);
 void cmd_modify_task(void* param);
 void cmd_time(void* param);
+void cmd_save(void* param);
 
 typedef enum {
     NEW_SUCCESS,
@@ -50,6 +51,7 @@ command_t commands[] = {
     {"show", cmd_show_task, "Show task details."},
     {"modify", cmd_modify_task, "Modify task details."},
     {"time", cmd_time, "Show the current time."},
+    {"save", cmd_save, "Save the current configuration."},
     {NULL, NULL, NULL}
 };
 
@@ -467,7 +469,7 @@ void cmd_new(void* param)
         {"Directory", NEW_PARSE_STRING, NULL, (void**)&task->parser.dir, NEW_PARAM_STRING, false},
         {"Environment (format: env1=value1 env2=value2 ...)", NEW_PARSE_ARRAY, NULL, (void**)&task->parser.env, NEW_PARAM_ARRAY, false},
         {"Autostart (true/false)", NEW_PARSE_BOOL, &(bool){false}, (void**)&task->parser.autostart, NEW_PARAM_BOOL, false},
-        {"Autorestart (always/unexpected/success/failure/never)", NEW_PARSE_AR, &(AR_modes){NEVER}, (void**)&task->parser.ar, NEW_PARAM_AR, false},
+        {"Autorestart (allways/unexpected/success/failure/never)", NEW_PARSE_AR, &(AR_modes){NEVER}, (void**)&task->parser.ar, NEW_PARAM_AR, false},
         {"Startretries", NEW_PARSE_INT, &(int){0}, (void**)&task->parser.startretries, NEW_PARAM_INT, false},
         {"Starttime", NEW_PARSE_INT, &(int){0}, (void**)&task->parser.starttime, NEW_PARAM_INT, false},
         {"Stoptime", NEW_PARSE_INT, &(int){0}, (void**)&task->parser.stoptime, NEW_PARAM_INT, false},
@@ -595,7 +597,7 @@ static int modify_task(task_t* task, const char* param)
         {"dir", "Directory", NEW_PARSE_STRING, NULL, (void**)&task->parser.dir, NEW_PARAM_STRING, false, true},
         {"env", "Environment format: env1=value1 env2=value2 ... envN=valueN", NEW_PARSE_ARRAY, NULL, (void**)&task->parser.env, NEW_PARAM_ARRAY, false, true},
         {"autostart", "Autostart (true/false)", NEW_PARSE_BOOL, &(bool){false}, (void**)&task->parser.autostart, NEW_PARAM_BOOL, false, false},
-        {"ar", "Autorestart (always/unexpected/success/failure/never)", NEW_PARSE_AR, &(AR_modes){NEVER}, (void**)&task->parser.ar, NEW_PARAM_AR, false, false},
+        {"ar", "Autorestart (allways/unexpected/success/failure/never)", NEW_PARSE_AR, &(AR_modes){NEVER}, (void**)&task->parser.ar, NEW_PARAM_AR, false, false},
         {"startretries", "Startretries", NEW_PARSE_INT, &(int){0}, (void**)&task->parser.startretries, NEW_PARAM_INT, false, false},
         {"starttime", "Starttime", NEW_PARSE_INT, &(int){0}, (void**)&task->parser.starttime, NEW_PARAM_INT, false, false},
         {"stoptime", "Stoptime", NEW_PARSE_INT, &(int){0}, (void**)&task->parser.stoptime, NEW_PARAM_INT, false, false},
@@ -705,4 +707,35 @@ void cmd_time(void* param)
     struct tm tm = *localtime(&t);
     fprintf(stdout, "Current time: %d-%02d-%02d %02d:%02d:%02d\n", tm.tm_year + 1900,\
     tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+}
+
+void cmd_save(void* param)
+{
+    (void)param;
+    fprintf(stdout, "Enter the file name to save the configuration to: ");
+
+    char* line = NULL;
+    size_t len = 0;
+
+    if (getline(&line, &len, stdin) == -1)
+    {
+        fprintf(stdout, "Error reading input. Modification cancelled.\n");
+        free(line);
+        return;
+    }
+
+    line[strcspn(line, "\n")] = '\0';
+
+    if (line[0] == '\0')
+    {
+        fprintf(stdout, "No file name provided. Save cancelled.\n");
+        free(line);
+        return;
+    }
+
+    fprintf(stdout, "Saving configuration to file.\n");
+
+    create_config_file(line, get_active_tasks());
+    free(line);
+
 }

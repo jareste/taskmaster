@@ -475,7 +475,7 @@ void check_if_restart(task_t* task)
 {
     switch (task->parser.ar)
     {
-        case ALWAYS:
+        case ALLWAYS:
             goto start;
             break;
         case UNEXPECTED:
@@ -683,7 +683,7 @@ int supervisor(task_t* tasks)
 
                     task->intern.exit_status = exit_status;
 
-                    for (i = 0; i < task->parser.exitcodes[0]; i++)
+                    for (i = 0; task->parser.exitcodes && i < task->parser.exitcodes[0]; i++)
                     {
                         if (task->parser.exitcodes[i] == exit_status)
                         {
@@ -694,7 +694,7 @@ int supervisor(task_t* tasks)
                         }
                     }
                 
-                    if (i == task->parser.exitcodes[0])
+                    if (task->parser.exitcodes && i == task->parser.exitcodes[0])
                     {
                         update_task_state(task, FATAL);
                         push_log(task, "Task %s exited with unrecognized status %d. Marking it as FATAL.", task->parser.name, exit_status);

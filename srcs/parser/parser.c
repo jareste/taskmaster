@@ -35,7 +35,7 @@ int parse_stopsignal(const char *str, int line_number)
     if (strcasecmp(str, "SIGHUP") == 0 || strcasecmp(str, "HUP") == 0) return SIGHUP;
     else if (strcasecmp(str, "SIGINT") == 0 || strcasecmp(str, "INT") == 0) return SIGINT;
     else if (strcasecmp(str, "SIGQUIT") == 0 || strcasecmp(str, "QUIT") == 0) return SIGQUIT;
-    else if (strcasecmp(str, "SIGILL") == 0 || strcasecmp(str, "KILL") == 0) return SIGILL;
+    else if (strcasecmp(str, "SIGILL") == 0 || strcasecmp(str, "ILL") == 0) return SIGILL;
     else if (strcasecmp(str, "SIGABRT") == 0 || strcasecmp(str, "ABRT") == 0) return SIGABRT;
     else if (strcasecmp(str, "SIGFPE") == 0 || strcasecmp(str, "FPE") == 0) return SIGFPE;
     else if (strcasecmp(str, "SIGKILL") == 0 || strcasecmp(str, "KILL") == 0) return SIGKILL;
@@ -55,7 +55,7 @@ int parse_stopsignal(const char *str, int line_number)
     return 0; // valor si no encuentra la señal
 }
 
-void fill_fields(char *name, char *value, struct task_t *task, unsigned int line_number)
+void fill_fields(char *name, char *value, task_t *task, unsigned int line_number)
 {
     if (strcmp("cmd", name) == 0)
         validate_cmd(value, task, line_number);
@@ -70,7 +70,10 @@ void fill_fields(char *name, char *value, struct task_t *task, unsigned int line
     else if (strcmp("autorestart", name) == 0)
         validate_str(value, task, line_number, 4);
     else if (strcmp("exitcodes", name) == 0)
+    {
         validate_exitcodes(value, task, line_number);
+        fprintf(stderr, "exitcodes: %p\n", task->parser.exitcodes);
+    }
     else if (strcmp("startretries", name) == 0)
         validate_ints(value, task, 2, line_number);
     else if (strcmp("starttime", name) == 0)
@@ -156,22 +159,6 @@ char *rm_space(char *s, int line_number)
     return (res);
 }
 
-
-void check_exitcodes(struct task_t *task)
-{
-    task_t *current = task;
-
-    while (current)
-    {
-        if (!current->parser.exitcodes)
-        {
-            current->parser.exitcodes = (int *)malloc(2 * sizeof(int));
-            current->parser.exitcodes[0] = 0;
-        }
-        current = FT_LIST_GET_NEXT(&task, current);
-    }
-}
-
 task_t* parse_config(char *file_path)
 {
     char *line = NULL;
@@ -238,8 +225,8 @@ task_t* parse_config(char *file_path)
     }
     free(line);
     fclose(file);
-    check_exitcodes(tasks);
-    create_config_file("nada", tasks); //cambiar nombre del fichero al bueno
+    // check_exitcodes(tasks);
+    // create_config_file("nada", tasks); //cambiar nombre del fichero al bueno
     return (tasks);
 }
 
@@ -247,24 +234,11 @@ task_t *new_task(char *name_service)
 {
     task_t *task = NEW(task_t, 1);
     task->parser.name = strdup(name_service);
-    task->parser.cmd = NULL;
-    task->parser.args = NULL;
-    task->parser.dir = NULL;
-    task->parser.stdout = NULL;
-    task->parser.stderr = NULL;
     task->parser.autostart = true;
-    task->parser.ar = ALWAYS;
-    task->parser.startretries = 0;
-    task->parser.starttime = 0;
-    task->parser.stoptime = 0;
-    task->parser.exitcodes = NULL;
-    task->parser.stopsignal = 0;
-    task->parser.stoptimeout = 0;
-    task->parser.umask = NULL;
-    task->parser.procs = 0;
-    task->parser.env = NULL;
+    task->parser.ar = ALLWAYS;
+    task->parser.stopsignal = 9;
 
-    //task->intern.state = STOPPED;
+    task->intern.state = STOPPED;
     return task;
 }
 
@@ -272,7 +246,7 @@ char* get_autorestart_str(AR_modes ar)
 {
     switch (ar)
     {
-        case ALWAYS: return "always";
+        case ALLWAYS: return "allways";
         case UNEXPECTED: return "unexpected";
         case SUCCESS: return "success";
         case FAILURE: return "failure";
@@ -283,8 +257,8 @@ char* get_autorestart_str(AR_modes ar)
 
 AR_modes parse_autorestart(char *str)
 {
-    if (strcasecmp(str, "always") == 0)
-        return (ALWAYS);
+    if (strcasecmp(str, "allways") == 0)
+        return (ALLWAYS);
     else if (strcasecmp(str, "unexpected") == 0)
         return (UNEXPECTED);
     else if (strcasecmp(str, "success") == 0)
@@ -526,7 +500,7 @@ int validate_str(char *value, struct task_t *task, unsigned int line_number, int
         validate_bool(value, task, line_number);
     else if (identify == 4)
     {
-        if (task->parser.ar != ALWAYS)
+        if (task->parser.ar != ALLWAYS)
         {
             fprintf(stderr, "Error linea %d: Parametro repetido.\n", line_number);
             return (-1);
@@ -554,16 +528,7 @@ int validate_str(char *value, struct task_t *task, unsigned int line_number, int
     return (0);
 }
 
-void fill_pos0(struct task_t *task)
-{
-    if (task->parser.exitcodes)
-        free(task->parser.exitcodes);
-    task->parser.exitcodes = (int *)malloc(2 * sizeof(int));
-    task->parser.exitcodes[0] = 0;
-    return ;
-}
-
-void validate_exitcodes(char *value, struct task_t *task, unsigned int line_number)
+void validate_exitcodes(char *value, task_t *task, unsigned int line_number)
 {
     char *s;
     int j = 0;
@@ -578,7 +543,7 @@ void validate_exitcodes(char *value, struct task_t *task, unsigned int line_numb
     if (value[0] != '{' && value[i] != '}')
     {
         fprintf(stderr, "Error linea %d: Los exitcodes deben estar entre {}.\n", line_number);
-        return fill_pos0(task);
+        return ;
     }
     value[i] = '\0';
     i = 1;
@@ -587,12 +552,12 @@ void validate_exitcodes(char *value, struct task_t *task, unsigned int line_numb
         if (value[i] == ',' && value[i + 1] == '\0')
         {
             fprintf(stderr, "Error linea %d: Caracter |%c| no valido. Despues de un ',' debe ir un valor.\n", line_number, value[i]);
-            return fill_pos0(task);
+            return ;
         }    
         if ((!isdigit(value[i]) && value[i] != '+' && value[i] != '-' && value[i] != ',') || (value[i] == ',' && value[i + 1] && value[i + 1] == ','))
         {
             fprintf(stderr, "Error linea %d: Caracter |%c| no valido. Los exitcodes no siguen esta sintaxis {1,127,2}.\n", line_number, value[i]);
-            return fill_pos0(task);
+            return ;
         }
         if (value[i] == ',' && value[i + 1] && (isdigit(value[i + 1]) || value[i + 1] == '-' || value[i + 1] == '+'))
             j++;
@@ -614,7 +579,10 @@ void validate_exitcodes(char *value, struct task_t *task, unsigned int line_numb
         {
             fprintf(stderr, "Error línea %d: |%s| no es un exitcode válido.\n", line_number, s);
             free(s);
-            return fill_pos0(task);
+            free(task->parser.exitcodes);
+            task->parser.exitcodes = NULL;
+            fprintf(stderr, "Error linea %d: Los exitcodes no siguen esta sintaxis {1,127,2}.\n", line_number);
+            return ;
         }
         free(s);
         task->parser.exitcodes[j + 1] = (int)num;
@@ -707,10 +675,8 @@ static	char	**write_result(char *s, char	**res)
 
 char	**ft_split(char *s)
 {
-	size_t	i;
 	char	**res;
 
-	i = 0;
 	if (!s)
 		return (0);
 	res = malloc(sizeof(char *) * (count_words(s) + 1));
@@ -734,8 +700,10 @@ char	*ft_strtrim(char *s1, char *set)
 
 void create_config_file(char *file_name, struct task_t *tasks)
 {
-    const char *AR_modes_strings[] = {"ALWAYS", "UNEXPECTED", "SUCCESS", "FAILURE", "NEVER"};
-    const char *Signals_strings[] = {"", "HUP", "INT", "QUIT", "KILL", "", "ABRT", "", "FPE", "KILL", "USR1", "SEGV", "USR2", "PIPE", "ALRM", "TERM", "", "CHLD", "CONT", "STOP", "TSTP", "TTIN", "TTOU"};
+    const char *AR_modes_strings[] = {"ALLWAYS", "UNEXPECTED", "SUCCESS", "FAILURE", "NEVER"};
+    const char *Signals_strings[] = {"", "SIGHUP", "SIGINT", "SIGQUIT", "SIGILL", "", "SIGABRT", \
+    "", "SIGFPE", "SIGKILL", "SIGUSR1", "SIGSEGV", "SIGUSR2", "SIGPIPE", "SIGALRM", "SIGTERM", "", \
+    "SIGCHLD", "SIGCONT", "SIGSTOP", "SIGTSTP", "SIGTTIN", "SIGTTOU"};
 
     FILE *file = fopen(file_name, "w");
     if (file == NULL)
@@ -757,6 +725,7 @@ void create_config_file(char *file_name, struct task_t *tasks)
         i = 0;
         if (current->parser.exitcodes)
         {
+            fprintf(stderr, "existe exitcodes\n");
             len = current->parser.exitcodes[0];
             fprintf(file, " exitcodes: {");
             while (current->parser.exitcodes && ++i < len)
@@ -778,4 +747,5 @@ void create_config_file(char *file_name, struct task_t *tasks)
         }
         current = FT_LIST_GET_NEXT(&tasks, current);
     }
+    fclose(file);
 }
