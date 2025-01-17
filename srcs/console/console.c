@@ -504,14 +504,14 @@ failure:
 
 void print_task(task_t* task)
 {
-    const int field_width = 15; // Adjust the width as needed
+    const int field_width = 15;
 
     fprintf(stdout, "%-*s %s\n", field_width, "Task name:", task->parser.name);
     fprintf(stdout, "%-*s %s", field_width, "Command:", task->parser.cmd);
     if (task->parser.args)
     {
         fprintf(stdout, " ");
-        for (size_t i = 0; task->parser.args[i]; ++i)
+        for (size_t i = 1; task->parser.args[i]; ++i)
         {
             fprintf(stdout, "%s ", task->parser.args[i]);
         }

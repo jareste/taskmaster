@@ -730,9 +730,28 @@ void create_config_file(char *file_name, struct task_t *tasks)
     while (current)
     {
         fprintf(file, "[%s]\n", current->parser.name);
-        fprintf(file, " cmd: \"%s\"\n", current->parser.cmd);
-        fprintf(file, " numprocs: %d\n", current->parser.procs);
-        fprintf(file, " umask: %s\n", current->parser.umask);
+        fprintf(file, " cmd: \"%s", current->parser.cmd);
+        if (current->parser.args)
+        {
+            len = 0;
+            while (current->parser.args[++len])
+                ;
+            i = 0;
+            while (++i < len - 1 && current->parser.args[i])
+                fprintf(file, " %s", current->parser.args[i]);
+            if (current->parser.args[i])
+                fprintf(file, " %s\"\n", current->parser.args[i]);
+            else
+                fprintf(file, "\"\n");
+        }
+        else
+            fprintf(file, " \"\n");
+        if (current->parser.dir)
+            fprintf(file, " workingdir: %s\n", current->parser.dir);
+        if (current->parser.procs)
+            fprintf(file, " numprocs: %d\n", current->parser.procs);
+        if (current->parser.umask)
+            fprintf(file, " umask: %s\n", current->parser.umask);
         fprintf(file, " autostart: %s\n", current->parser.autostart ? "true" : "false");
         fprintf(file, " autorestart: %s\n", AR_modes_strings[current->parser.ar]);
         i = 0;
