@@ -50,6 +50,7 @@ typedef enum
 typedef enum {
     NEW_PARSE_STRING,
     NEW_PARSE_INT,
+    NEW_PARSE_UMASK,
     NEW_PARSE_BOOL,
     NEW_PARSE_ARRAY,
     NEW_PARSE_AR
@@ -57,6 +58,7 @@ typedef enum {
 
 typedef enum {
     NEW_PARAM_STRING,
+    NEW_PARAM_UMASK,
     NEW_PARAM_INT,
     NEW_PARAM_BOOL,
     NEW_PARAM_ARRAY,
@@ -80,7 +82,7 @@ typedef struct
     char*       stderr; /* wher the stderr should be written */
     bool        append_out; /* append outputs or just create new ones? */
     char*       dtach; /* run with dtach (this overwrites stdout and stderr) */
-    char*       umask; /* umask of the process */
+    mode_t      umask; /* umask of the process */
     bool        autostart; /* autostart or wait CLI order? */
     AR_modes    ar; /* when to autorestart */
     int         startretries; /* if it fails to start how many times should we try? */

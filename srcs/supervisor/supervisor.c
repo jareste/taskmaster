@@ -330,6 +330,9 @@ void modify_task_param(void* param, void* new_value, task_param type, bool shoul
         case NEW_PARAM_INT:
             // No need to free int
             break;
+        case NEW_PARAM_UMASK:
+            // No need to free umask
+            break;
         case NEW_PARAM_BOOL:
             // No need to free bool
             break;
@@ -346,6 +349,9 @@ void modify_task_param(void* param, void* new_value, task_param type, bool shoul
         break;
     case NEW_PARAM_INT:
         *(int*)param = *(int*)new_value;
+        break;
+    case NEW_PARAM_UMASK:
+        *(mode_t*)param = *(mode_t*)new_value;
         break;
     case NEW_PARAM_BOOL:
         *(bool*)param = *(bool*)new_value;
@@ -443,11 +449,6 @@ void free_task(task_t* task)
     {
         free(task->parser.exitcodes);
         task->parser.exitcodes = NULL;
-    }
-    if (task->parser.umask)
-    {
-        free(task->parser.umask);
-        task->parser.umask = NULL;
     }
     free(task);
 }

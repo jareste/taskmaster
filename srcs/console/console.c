@@ -388,6 +388,14 @@ new_task_return parse_line(task_format format, void* param)
     case NEW_PARSE_INT:
         *(int*)param = atoi(line);
         break;
+    case NEW_PARSE_UMASK:
+        *(mode_t*)param = strtol(line, NULL, 8);
+        if (*(mode_t*)param < 0 || *(mode_t*)param > 0777)
+        {
+            fprintf(stdout, "Invalid umask. Setting default 022\n");
+            *(mode_t*)param = 022;
+        }
+        break;
     case NEW_PARSE_BOOL:
         *(bool*)param = (strcasecmp(line, "true") == 0) ? true : false;
         break;
@@ -428,6 +436,9 @@ int conf_parse_format(const char* string, task_format format, void*  default_val
             break;
         case NEW_PARAM_INT:
             *(int*)param = *(int*)default_value;
+            break;
+        case NEW_PARAM_UMASK:
+            *(mode_t*)param = *(mode_t*)default_value;
             break;
         case NEW_PARAM_BOOL:
             *(bool*)param = *(bool*)default_value;
@@ -489,7 +500,7 @@ void cmd_new(void* param)
         {"Stoptimeout", NEW_PARSE_INT, &(int){0}, (void**)&task->parser.stoptimeout, NEW_PARAM_INT, false},
         {"Stdout", NEW_PARSE_STRING, NULL, (void**)&task->parser.stdout, NEW_PARAM_STRING, false},
         {"Stderr", NEW_PARSE_STRING, NULL, (void**)&task->parser.stderr, NEW_PARAM_STRING, false},
-        {"Umask", NEW_PARSE_INT, &(int){0}, (void**)&task->parser.umask, NEW_PARAM_INT, false},
+        {"Umask", NEW_PARSE_UMASK, &(mode_t){022}, (void**)&task->parser.umask, NEW_PARAM_UMASK, false},
     };
 
     for (size_t i = 0; i < sizeof(configs) / sizeof(configs[0]); i++)
@@ -553,7 +564,7 @@ void print_task(task_t* task)
     fprintf(stdout, "%-*s %d\n", field_width, "Stoptimeout:", task->parser.stoptimeout);
     fprintf(stdout, "%-*s %s\n", field_width, "Stdout:", task->parser.stdout);
     fprintf(stdout, "%-*s %s\n", field_width, "Stderr:", task->parser.stderr);
-    fprintf(stdout, "%-*s %s\n", field_width, "Umask:", task->parser.umask);
+    fprintf(stdout, "%-*s %04o\n", field_width, "Umask:", task->parser.umask);
 }
 
 void cmd_show_task(void* task)
@@ -617,7 +628,7 @@ static int modify_task(task_t* task, const char* param)
         {"stoptimeout", "Stoptimeout", NEW_PARSE_INT, &(int){0}, (void**)&task->parser.stoptimeout, NEW_PARAM_INT, false, false},
         {"stdout", "Stdout", NEW_PARSE_STRING, NULL, (void**)&task->parser.stdout, NEW_PARAM_STRING, false, true},
         {"stderr", "Stderr", NEW_PARSE_STRING, NULL, (void**)&task->parser.stderr, NEW_PARAM_STRING, false, true},
-        {"umask", "Umask", NEW_PARSE_INT, &(int){0}, (void**)&task->parser.umask, NEW_PARAM_INT, false, false},
+        {"umask", "Umask", NEW_PARSE_UMASK, &(mode_t){022}, (void**)&task->parser.umask, NEW_PARAM_UMASK, false, false},
     };
 
     if (task == NULL || param == NULL)

@@ -156,6 +156,19 @@ char *rm_space(char *s, int line_number)
     return (res);
 }
 
+void check_umask(task_t* tasks)
+{
+    task_t* task = tasks;
+    while (task)
+    {
+        if (task->parser.umask == 0)
+        {
+            task->parser.umask = 022;
+        }
+        task = FT_LIST_GET_NEXT(&tasks, task);
+    }
+}
+
 task_t* parse_config(char *file_path)
 {
     char *line = NULL;
@@ -222,6 +235,7 @@ task_t* parse_config(char *file_path)
     }
     free(line);
     fclose(file);
+    check_umask(tasks);
     // check_exitcodes(tasks);
     // create_config_file("nada", tasks); //cambiar nombre del fichero al bueno
     return (tasks);
@@ -484,12 +498,20 @@ int validate_str(char *value, struct task_t *task, unsigned int line_number, int
     }
     if (identify == 1)
     {
-        if (task->parser.umask != NULL)
+        if (task->parser.umask != 0)
         {
             fprintf(stderr, "Taskmaster: Error line %d: repeated parameter.\n", line_number);
             return (-1);
         }
-        task->parser.umask = strdup(value);
+        char *endptr;
+        mode_t new_umask = strtol(value, &endptr, 8); // Base 8 for octal parsing
+
+        if (*endptr != '\0')
+        {
+            fprintf(stderr, "Taskmaster: Error line %d: invalid umask: %s\n", line_number, value);
+            return 1;
+        }
+        task->parser.umask = new_umask;
     }
     else if (identify == 2)
     {
@@ -752,7 +774,7 @@ void create_config_file(char *file_name, struct task_t *tasks)
         if (current->parser.procs)
             fprintf(file, " numprocs: %d\n", current->parser.procs);
         if (current->parser.umask)
-            fprintf(file, " umask: %s\n", current->parser.umask);
+            fprintf(file, " umask: %04o\n", current->parser.umask);
         fprintf(file, " autostart: %s\n", current->parser.autostart ? "true" : "false");
         fprintf(file, " autorestart: %s\n", AR_modes_strings[current->parser.ar]);
         i = 0;
