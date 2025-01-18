@@ -787,7 +787,7 @@ void create_config_file(char *file_name, struct task_t *tasks)
             fprintf(file, "%d}\n", current->parser.exitcodes[i]);
         }
         fprintf(file, " startretries: %d\n", current->parser.startretries);\
-        fprintf(file, " starttime: %d\n", current->parser.starttime);
+        fprintf(file, " starttime: %lu\n", current->parser.starttime);
         fprintf(file, " stopsignal: %s\n", Signals_strings[current->parser.stopsignal]);
         fprintf(file, " stoptime: %d\n", current->parser.stoptime);
         fprintf(file, " stdout: %s\n", current->parser.stdout);

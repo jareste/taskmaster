@@ -3,6 +3,7 @@
 
 #include <ft_list.h>
 #include <pthread.h>
+#include <stdint.h>
 // #include <sys/types.h>
 
 #define write(x,y,z) do{ \
@@ -80,13 +81,12 @@ typedef struct
     char**      env; /* environment */
     char*       stdout; /* where to write stdout */
     char*       stderr; /* wher the stderr should be written */
-    bool        append_out; /* append outputs or just create new ones? */
     char*       dtach; /* run with dtach (this overwrites stdout and stderr) */
     mode_t      umask; /* umask of the process */
     bool        autostart; /* autostart or wait CLI order? */
     AR_modes    ar; /* when to autorestart */
     int         startretries; /* if it fails to start how many times should we try? */
-    int         starttime; /*????*/
+    uint64_t    starttime; /*????*/
     int         stoptime; /*????*/
     int*        exitcodes; /* valid exit codes of the process, any other must be informed */
     int         stopsignal; /* signal to stop the process */
@@ -104,6 +104,7 @@ typedef struct
     log_t       logs; /* logs that the supervisor it's tracing about process */
     task_state  prev_state; /* how it is now? */
     cmd_request cmd_request; /* what to do with this task */
+    uint64_t    last_start; /* last time it was started */
 } intern_t;
 
 typedef struct task_t {

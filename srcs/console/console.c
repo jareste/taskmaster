@@ -58,13 +58,16 @@ command_t commands[] = {
 task_t* get_task_from_name(const char* name)
 {
     task_t* tasks = get_active_tasks();
+    printf("Requested task: %s\n", name);
     if (tasks)
     {
         task_t* task = tasks;
         while (task)
         {
+            printf("Task: %s\n", task->parser.name);
             if (strcmp(task->parser.name, name) == 0)
             {
+                printf("Task found: %s\n", name);
                 return task;
             }
             task = FT_LIST_GET_NEXT(&tasks, task);
@@ -74,6 +77,7 @@ task_t* get_task_from_name(const char* name)
     {
         fprintf(stdout, "No active tasks.\n");
     }
+    printf("Task not found: %s\n", name);
     return NULL;
 }
 
@@ -83,16 +87,39 @@ command_t* find_command(const char* name)
     {
         if (strcmp(cmd->name, name) == 0)
         {
+            fprintf(stdout, "Command found: %s\n", name);
             return cmd;
         }
     }
 
     if (strcmp(name, "ls") == 0 || strcmp(name, "?") == 0)
     {
+        fprintf(stdout, "Command found: %s\n", name);
         return commands;
     }
 
+    fprintf(stdout, "Command not found: %s\n", name);
     return NULL;
+}
+
+#include <termios.h>
+#include <unistd.h>
+#include <sys/select.h>
+
+void set_terminal_mode() {
+    struct termios t;
+    tcgetattr(STDIN_FILENO, &t);
+    t.c_lflag &= ~(ICANON | ECHO); // Disable canonical mode and echo
+    t.c_cc[VMIN] = 1;             // Minimum number of characters to read
+    t.c_cc[VTIME] = 0;            // No timeout
+    tcsetattr(STDIN_FILENO, TCSANOW, &t);
+}
+
+void reset_terminal_mode() {
+    struct termios t;
+    tcgetattr(STDIN_FILENO, &t);
+    t.c_lflag |= (ICANON | ECHO); // Restore canonical mode and echo
+    tcsetattr(STDIN_FILENO, TCSANOW, &t);
 }
 
 void* interactive_console(void* param)
@@ -104,11 +131,14 @@ void* interactive_console(void* param)
     write(1, "Interactive Console. Type 'help' for a list of commands.\n", strlen("Interactive Console. Type 'help' for a list of commands.\n"));
     // fflush(stdout);
 
+    atexit(reset_terminal_mode);
+    set_terminal_mode();
+
     while (exit_flag == false)
     {
         fprintf(stdout, "-> ");
         fflush(stdout);
-        
+        fprintf(stderr, "Waiting for input\n");
         /* Propper threat cancelation ZzzzZZZzzz */
         fd_set readfds;
         FD_ZERO(&readfds);
@@ -117,12 +147,22 @@ void* interactive_console(void* param)
 
         int maxfd = (STDIN_FILENO > pipefd[0]) ? STDIN_FILENO : pipefd[0];
 
+        fprintf(stderr, "Selecting\n");
         int retval = select(maxfd + 1, &readfds, NULL, NULL, NULL);
         if (retval == -1)
         {
+            // if (errno == EINTR)
+            // {
+            //     continue;
+            // }
             perror("select");
             break;
         }
+        if (retval == 0)
+        {
+            continue;
+        }
+        fprintf(stderr, "Selected\n");
 
         if (FD_ISSET(pipefd[0], &readfds))
         {
@@ -133,28 +173,43 @@ void* interactive_console(void* param)
         }
         /* Propper threat cancelation ZzzzZZZzzz */
 
-        if (FD_ISSET(STDIN_FILENO, &readfds))
+        // printf("Reading\n");
+        if (retval > 0 && FD_ISSET(STDIN_FILENO, &readfds))
         {
-            if (fgets(input, sizeof(input), stdin) == NULL)
+            fprintf(stderr, "Readingstdin\n");
+            ssize_t n = read(STDIN_FILENO, input, sizeof(input) - 1);
+            if (n > 0)
             {
+                input[n] = '\0'; // Null-terminate
+                input[strcspn(input, "\n")] = 0; // Remove newline
+            }
+            else
+            {
+                fprintf(stderr, "Failed to read from stdin\n");
                 break;
             }
 
-            input[strcspn(input, "\n")] = 0;
+
+            // input[strcspn(input, "\n")] = 0;
+            // printf("Input: %s\n", input);
 
             if (strcmp(input, "exit") == 0)
             {
+                printf("Exiting\n");
                 break;
             }
 
             char* cmd_name = strtok(input, " ");
             char* arg = strtok(NULL, "");
 
+            // printf("Command: %s\n", cmd_name);
             if (cmd_name == NULL)
             {
+                fprintf(stdout, "Unknown command. Type 'help' for a list of commands.\n");
                 continue;
             }
 
+            // printf("Command: %s\n", cmd_name);
             command_t* cmd = find_command(cmd_name);
             if (cmd != NULL)
             {
@@ -238,6 +293,7 @@ void cmd_active(void* param)
 static void request_action_on_task(const char* task_name, cmd_request request)
 {
     task_t* task = get_task_from_name(task_name);
+    printf("Requested task: %s\n", task_name);
     if (task)
     {
         update_task_cmd_state(task, request);
@@ -270,6 +326,7 @@ void cmd_start(void* param)
 
 void cmd_stop(void* param)
 {
+    printf("Stop command\n");
     if (param == NULL)
     {
         fprintf(stdout, "Usage: stop <task_name>\n");
@@ -549,7 +606,7 @@ void print_task(task_t* task)
     fprintf(stdout, "%-*s %s\n", field_width, "Autostart:", task->parser.autostart ? "true" : "false");
     fprintf(stdout, "%-*s %s\n", field_width, "Autorestart:", get_autorestart_str(task->parser.ar));
     fprintf(stdout, "%-*s %d\n", field_width, "Startretries:", task->parser.startretries);
-    fprintf(stdout, "%-*s %d\n", field_width, "Starttime:", task->parser.starttime);
+    fprintf(stdout, "%-*s %lu\n", field_width, "Starttime:", task->parser.starttime);
     fprintf(stdout, "%-*s %d\n", field_width, "Stoptime:", task->parser.stoptime);
     fprintf(stdout, "%-*s\n", field_width, "Exitcodes:");
     if (task->parser.exitcodes == NULL)

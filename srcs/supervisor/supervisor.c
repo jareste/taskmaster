@@ -7,6 +7,9 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <time.h>
+#include <pwd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #include <ft_malloc.h>
 #include <taskmaster.h>
@@ -85,6 +88,8 @@ int start_task(task_t* task)
     {
         close(pipefd[0]);
 
+        // umask(task->parser.umask);
+
         if (task->parser.dir != NULL)
         {
             if (chdir(task->parser.dir) == -1)
@@ -97,6 +102,29 @@ int start_task(task_t* task)
                 exit(EXIT_FAILURE);
             }
         }
+
+        // if (getuid() == 0)
+        // {
+        //     struct passwd *pw;
+        //     pw = getpwnam("nobody"); // Use "nobody" as the target user
+        //     if (pw == NULL)
+        //     {
+        //         perror("getpwnam");
+        //         exit(EXIT_FAILURE);
+        //     }
+
+        //     if (setgid(pw->pw_gid) == -1)
+        //     {
+        //         perror("setgid");
+        //         exit(EXIT_FAILURE);
+        //     }
+
+        //     if (setuid(pw->pw_uid) == -1)
+        //     {
+        //         perror("setuid");
+        //         exit(EXIT_FAILURE);
+        //     }
+        // }
 
         if (task->parser.stdout != NULL)
         {
@@ -188,11 +216,13 @@ int start_task(task_t* task)
         if (retval == -1)
         {
             close(pipefd[0]);
+            fprintf(stderr, "select: %s\n", strerror(errno));
             return -1;
         }
         else if (retval == 0)
         {
             task->intern.pid = pid;
+            fprintf(stderr, "Task %s sstarted with pid %d\n", task->parser.name, pid);
             update_task_state(task, RUNNING);
         }
         else
@@ -209,6 +239,7 @@ int start_task(task_t* task)
                 task->intern.pid = pid;
                 update_task_state(task, RUNNING);
             }
+            fprintf(stderr, "Task %s started with pid %d\n", task->parser.name, pid);
         }
         close(pipefd[0]);
     }
@@ -586,6 +617,30 @@ static void cleanup(task_t* tasks, bool kill_all)
 
 void update_task_state(task_t* task, task_state state)
 {
+    if (task->intern.state == state)
+    {
+        return;
+    }
+    else if (task->intern.state == RUNNING && state != RUNNING)
+    {
+        task->intern.pid = -1;
+    }
+    else if (task->intern.state != STARTING && state == STARTING)
+    {
+        task->intern.last_start = time(NULL);
+    }
+    else if (task->intern.state == STARTING && state == RUNNING)
+    {
+        if (task->intern.last_start - time(NULL) > task->parser.starttime)
+        {
+            push_log(task, "Task %s started succesfully in %ld seconds", task->parser.name, time(NULL) - task->intern.last_start);
+        }
+        else
+        {
+            push_log(task, "Task %s trying to start...", task->parser.name);
+            return ;
+        }
+    }
     task->intern.prev_state = task->intern.state;
     task->intern.state = state;
 }
@@ -685,6 +740,11 @@ int supervisor(task_t* tasks)
                 {
                     task->intern.prev_state = task->intern.state;
                     push_log(task, "Task %s is running", task->parser.name);
+                    if (task->intern.state == STARTING)
+                    {
+                        /* Check if we can mark it as running already. */
+                        update_task_state(task, RUNNING);
+                    }
                 }
             }
             else if (result == -1)
@@ -705,6 +765,14 @@ int supervisor(task_t* tasks)
                     int exit_status = WEXITSTATUS(status);
 
                     task->intern.exit_status = exit_status;
+
+                    if (task->intern.state == STARTING)
+                    {
+                        if (time(NULL) - task->intern.last_start < task->parser.starttime)
+                        {
+                            push_log(task, "Task %s failed to start in %ld seconds", task->parser.name, time(NULL) - task->intern.last_start);
+                        }
+                    }
 
                     for (i = 0; task->parser.exitcodes && i < task->parser.exitcodes[0]; i++)
                     {
@@ -770,6 +838,7 @@ int supervisor(task_t* tasks)
 
         tasks = get_active_tasks();
         task = FT_LIST_GET_NEXT(&tasks, task);
+        usleep(20000); /* 20ms. Avoid CPU overwhelming */
     }
 
 end:

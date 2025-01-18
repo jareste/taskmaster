@@ -11,21 +11,22 @@ static pthread_t console_thread;
 static task_t* m_active_tasks = NULL;
 int pipefd[2];
 bool exit_flag = false;
-pthread_mutex_t g_mutex_task = PTHREAD_MUTEX_INITIALIZER;
+// pthread_mutex_t g_mutex_task = PTHREAD_MUTEX_INITIALIZER;
 
 task_t* get_active_tasks()
 {
-    pthread_mutex_lock(&g_mutex_task);
-    task_t* tasks = m_active_tasks;
-    pthread_mutex_unlock(&g_mutex_task);
-    return tasks;
+    // pthread_mutex_lock(&g_mutex_task);
+    // task_t* tasks = m_active_tasks;
+    // pthread_mutex_unlock(&g_mutex_task);
+    // return tasks;
+    return m_active_tasks;
 }
 
 void set_active_tasks(task_t* tasks)
 {
-    pthread_mutex_lock(&g_mutex_task);
+    // pthread_mutex_lock(&g_mutex_task);
     m_active_tasks = tasks;
-    pthread_mutex_unlock(&g_mutex_task);
+    // pthread_mutex_unlock(&g_mutex_task);
 }
 
 void handle_sigint(int sig)
