@@ -394,6 +394,12 @@ void validate_envs(char *line, struct task_t *task, unsigned int line_number)
     }
     while (line[i])
     {
+        if (i == 0 && line[i] == '=')
+        {
+            fprintf(stderr, "Taskmaster: Error line %d: Debe haber al menos un caracter antes de '='.\n", line_number);
+            free(line);
+            return ;
+        }
         if (isspace(line[i]))
         {
             fprintf(stderr, "Taskmaster: Error line %d: non valid spaces\n", line_number);
@@ -577,12 +583,12 @@ void validate_exitcodes(char *value, task_t *task, unsigned int line_number)
     {   
         if (value[i] == ',' && value[i + 1] == '\0')
         {
-            fprintf(stderr, "Taskmaster: Error line %d: |%s| is not a valid exitcode. Syntax {1, 127, 2}.\n", line_number, value);
+            fprintf(stderr, "Taskmaster: Error line %d: |%s| is not a valid exitcode. Syntax {1,127,2}.\n", line_number, value);
             return ;
         }    
         if ((!isdigit(value[i]) && value[i] != '+' && value[i] != '-' && value[i] != ',') || (value[i] == ',' && value[i + 1] && value[i + 1] == ','))
         {
-            fprintf(stderr, "Taskmaster: Error line %d: |%s| is not a valid exitcode. Syntax {1, 127, 2}.\n", line_number, value);
+            fprintf(stderr, "Taskmaster: Error line %d: |%s| is not a valid exitcode. Syntax {1,127,2}.\n", line_number, value);
             return ;
         }
         if (value[i] == ',' && value[i + 1] && (isdigit(value[i + 1]) || value[i + 1] == '-' || value[i + 1] == '+'))
@@ -606,7 +612,7 @@ void validate_exitcodes(char *value, task_t *task, unsigned int line_number)
             free(s);
             free(task->parser.exitcodes);
             task->parser.exitcodes = NULL;
-            fprintf(stderr, "Taskmaster: Error line %d: |%s| is not a valid exitcode. Syntax {1, 127, 2}.\n", line_number, s);
+            fprintf(stderr, "Taskmaster: Error line %d: You have to enter a number. Syntax {1,127,2}.\n", line_number);
             return ;
         }
         free(s);
@@ -796,8 +802,11 @@ void create_config_file(char *file_name, struct task_t *tasks)
         if (current->parser.env)
         {
             fprintf(file, " env:\n");
-            while (current->parser.env && i + 1 < env_count && current->parser.env[++i])
+            while (current->parser.env && env_count > 0 && i <= env_count && current->parser.env[i])
+            {
                 fprintf(file, " -%s\n", current->parser.env[i]);
+                i++;
+            }
         }
         current = FT_LIST_GET_NEXT(&tasks, current);
     }

@@ -1,0 +1,38 @@
+[ola]
+cmd: "onpare que dices"
+cmd : ala
+cmd: quehablas
+cmd: "repetido bandido"
+exitcodes: {}
+exitcodes: {si}
+exitcodes : {1,2}
+exitcodes: {1,3,4}
+exitcodes: {1,2,3,4,}
+exitcodes: {nada}
+env:
+umask: 0777777777777777777777
+umask: 022
+stoptime: 10
+env:
+-SI=aaa
+- S=aaa
+-=
+-======
+-A=A
+-A= 
+-=A
+nada: que
+invent: "que hab"
+stdout: "/noexiste/nada"
+[adios]
+numprocs: 100
+workingdir: "/suerte"
+autorestart: sihombre
+stopsignal: nada
+[wow]
+cmd: nada
+cmd: "ahrasi quesi"
+exitcodes: {9}
+env:
+--a=a
+-c=X
