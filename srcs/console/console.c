@@ -58,16 +58,13 @@ command_t commands[] = {
 task_t* get_task_from_name(const char* name)
 {
     task_t* tasks = get_active_tasks();
-    printf("Requested task: %s\n", name);
     if (tasks)
     {
         task_t* task = tasks;
         while (task)
         {
-            printf("Task: %s\n", task->parser.name);
             if (strcmp(task->parser.name, name) == 0)
             {
-                printf("Task found: %s\n", name);
                 return task;
             }
             task = FT_LIST_GET_NEXT(&tasks, task);
@@ -77,7 +74,7 @@ task_t* get_task_from_name(const char* name)
     {
         fprintf(stdout, "No active tasks.\n");
     }
-    printf("Task not found: %s\n", name);
+    fprintf(stderr, "Task not found: %s\n", name);
     return NULL;
 }
 
@@ -87,18 +84,16 @@ command_t* find_command(const char* name)
     {
         if (strcmp(cmd->name, name) == 0)
         {
-            fprintf(stdout, "Command found: %s\n", name);
             return cmd;
         }
     }
 
     if (strcmp(name, "ls") == 0 || strcmp(name, "?") == 0)
     {
-        fprintf(stdout, "Command found: %s\n", name);
         return commands;
     }
 
-    fprintf(stdout, "Command not found: %s\n", name);
+    fprintf(stderr, "Command not found: %s\n", name);
     return NULL;
 }
 
@@ -124,21 +119,26 @@ void reset_terminal_mode() {
 
 void* interactive_console(void* param)
 {
+    // (void)param;
     int* pipefd = (int*)param;
     char input[256];
+    // int input_len = 0;
+    // bool input_ready = true;
 
     // fprintf(stdout, "Interactive Console. Type 'help' for a list of commands.\n");
     write(1, "Interactive Console. Type 'help' for a list of commands.\n", strlen("Interactive Console. Type 'help' for a list of commands.\n"));
     // fflush(stdout);
 
-    atexit(reset_terminal_mode);
-    set_terminal_mode();
-
     while (exit_flag == false)
     {
-        fprintf(stdout, "-> ");
-        fflush(stdout);
-        fprintf(stderr, "Waiting for input\n");
+        // if (input_ready == true)
+        // {
+        //     input_ready = false;
+        //     fprintf(stdout, "-> ");
+            write(1, "-> ", strlen("-> "));
+            fflush(stdout);
+        // }
+        // fprintf(stderr, "Waiting for input\n");
         /* Propper threat cancelation ZzzzZZZzzz */
         fd_set readfds;
         FD_ZERO(&readfds);
@@ -147,7 +147,11 @@ void* interactive_console(void* param)
 
         int maxfd = (STDIN_FILENO > pipefd[0]) ? STDIN_FILENO : pipefd[0];
 
-        fprintf(stderr, "Selecting\n");
+        struct timeval timeout;
+
+        timeout.tv_sec = 0;
+        timeout.tv_usec = 10000; // 10ms
+        // fprintf(stderr, "Selecting\n");
         int retval = select(maxfd + 1, &readfds, NULL, NULL, NULL);
         if (retval == -1)
         {
@@ -162,8 +166,8 @@ void* interactive_console(void* param)
         {
             continue;
         }
-        fprintf(stderr, "Selected\n");
 
+        // input_ready = true;
         if (FD_ISSET(pipefd[0], &readfds))
         {
             char buf[4];
@@ -176,7 +180,7 @@ void* interactive_console(void* param)
         // printf("Reading\n");
         if (retval > 0 && FD_ISSET(STDIN_FILENO, &readfds))
         {
-            fprintf(stderr, "Readingstdin\n");
+            // fprintf(stderr, "Readingstdin\n");
             ssize_t n = read(STDIN_FILENO, input, sizeof(input) - 1);
             if (n > 0)
             {
@@ -195,7 +199,6 @@ void* interactive_console(void* param)
 
             if (strcmp(input, "exit") == 0)
             {
-                printf("Exiting\n");
                 break;
             }
 
@@ -234,6 +237,7 @@ void* interactive_console(void* param)
 
     return NULL;
 }
+
 char* get_state_string(task_state ts)
 {
     switch (ts)
@@ -293,7 +297,6 @@ void cmd_active(void* param)
 static void request_action_on_task(const char* task_name, cmd_request request)
 {
     task_t* task = get_task_from_name(task_name);
-    printf("Requested task: %s\n", task_name);
     if (task)
     {
         update_task_cmd_state(task, request);
@@ -326,7 +329,7 @@ void cmd_start(void* param)
 
 void cmd_stop(void* param)
 {
-    printf("Stop command\n");
+    fprintf(stderr, "Stop command\n");
     if (param == NULL)
     {
         fprintf(stdout, "Usage: stop <task_name>\n");

@@ -181,7 +181,10 @@ int start_task(task_t* task)
             launch_dtach(task);
         }
         else
+        {
+            close(STDIN_FILENO);
             execve(task->parser.cmd, task->parser.args, task->parser.env);
+        }
 
         snprintf(buffer, sizeof(buffer), "Failed to start task %s due to %s.", 
                  task->parser.name, strerror(errno));
@@ -222,7 +225,6 @@ int start_task(task_t* task)
         else if (retval == 0)
         {
             task->intern.pid = pid;
-            fprintf(stderr, "Task %s sstarted with pid %d\n", task->parser.name, pid);
             update_task_state(task, RUNNING);
         }
         else
@@ -239,7 +241,6 @@ int start_task(task_t* task)
                 task->intern.pid = pid;
                 update_task_state(task, RUNNING);
             }
-            fprintf(stderr, "Task %s started with pid %d\n", task->parser.name, pid);
         }
         close(pipefd[0]);
     }
