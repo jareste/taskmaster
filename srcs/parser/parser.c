@@ -802,7 +802,7 @@ void create_config_file(char *file_name, struct task_t *tasks)
         if (current->parser.env)
         {
             fprintf(file, " env:\n");
-            while (current->parser.env && env_count > 0 && i <= env_count && current->parser.env[i])
+            while (current->parser.env && current->parser.env[i])
             {
                 fprintf(file, " -%s\n", current->parser.env[i]);
                 i++;
